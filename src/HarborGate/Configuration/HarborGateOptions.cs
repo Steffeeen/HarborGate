@@ -25,6 +25,11 @@ public class HarborGateOptions
     public bool EnableHttps { get; set; } = true;
 
     /// <summary>
+    /// Whether to automatically redirect HTTP to HTTPS. Default: true when HTTPS is enabled
+    /// </summary>
+    public bool RedirectHttpToHttps { get; set; } = true;
+
+    /// <summary>
     /// Log level for the application. Default: Information
     /// </summary>
     public string LogLevel { get; set; } = "Information";

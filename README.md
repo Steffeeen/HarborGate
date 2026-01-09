@@ -6,13 +6,15 @@ Built mostly using Claude Sonnet 4.5 with [opencode](https://opencode.ai/).
 
 ## Features
 
-### Phase 1 & 2 (Current)
+### Phase 1 & 2 & 3 (Complete)
 - ✅ Dynamic reverse proxy using YARP (Yet Another Reverse Proxy)
 - ✅ Docker label-based configuration
 - ✅ Automatic port discovery
 - ✅ Hot-reload routes without restart
 - ✅ Real-time Docker container monitoring
 - ✅ Automatic SSL/TLS certificates from Let's Encrypt
+- ✅ HTTP to HTTPS automatic redirect (like Traefik)
+- ✅ SNI-based certificate selection
 
 ### Coming Soon
 - 🔜 OpenID Connect authentication with RBAC (Phase 4)

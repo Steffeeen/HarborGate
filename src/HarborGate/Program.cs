@@ -29,12 +29,14 @@ if (!string.IsNullOrEmpty(builder.Configuration.GetValue<string>("HARBORGATE_LOG
 }
 
 // Register the options for dependency injection
+builder.Services.AddSingleton(harborGateOptions);
 builder.Services.Configure<HarborGateOptions>(options =>
 {
     options.DockerSocket = harborGateOptions.DockerSocket;
     options.HttpPort = harborGateOptions.HttpPort;
     options.HttpsPort = harborGateOptions.HttpsPort;
     options.EnableHttps = harborGateOptions.EnableHttps;
+    options.RedirectHttpToHttps = harborGateOptions.RedirectHttpToHttps;
     options.LogLevel = harborGateOptions.LogLevel;
     options.Ssl = harborGateOptions.Ssl;
 });
@@ -158,6 +160,10 @@ if (harborGateOptions.EnableHttps)
 var storage = app.Services.GetRequiredService<CertificateStorageService>();
 await storage.LoadCertificatesFromDiskAsync();
 
+// Add HTTPS redirect middleware (must be before ACME challenge)
+// ACME challenge middleware will prevent redirects for /.well-known/acme-challenge/*
+app.UseHttpsRedirect();
+
 // Add ACME challenge middleware (must be early in pipeline, before YARP)
 app.UseAcmeChallenge();
 
@@ -178,6 +184,7 @@ logger.LogInformation("Harbor Gate starting on HTTP port {HttpPort}", harborGate
 if (harborGateOptions.EnableHttps)
 {
     logger.LogInformation("Harbor Gate starting on HTTPS port {HttpsPort}", harborGateOptions.HttpsPort);
+    logger.LogInformation("HTTP to HTTPS redirect: {Enabled}", harborGateOptions.RedirectHttpToHttps ? "Enabled" : "Disabled");
     logger.LogInformation("SSL Certificate Provider: {Provider}", harborGateOptions.Ssl.CertificateProvider);
     
     if (harborGateOptions.Ssl.CertificateProvider.Equals("LetsEncrypt", StringComparison.OrdinalIgnoreCase))
