@@ -6,7 +6,7 @@ Built mostly using Claude Sonnet 4.5 with [opencode](https://opencode.ai/).
 
 ## Features
 
-### Phase 1 & 2 & 3 (Complete)
+### Phase 1 & 2 & 3 & 4 (Complete)
 - ✅ Dynamic reverse proxy using YARP (Yet Another Reverse Proxy)
 - ✅ Docker label-based configuration
 - ✅ Automatic port discovery
@@ -15,9 +15,9 @@ Built mostly using Claude Sonnet 4.5 with [opencode](https://opencode.ai/).
 - ✅ Automatic SSL/TLS certificates from Let's Encrypt
 - ✅ HTTP to HTTPS automatic redirect (like Traefik)
 - ✅ SNI-based certificate selection
+- ✅ OpenID Connect authentication with RBAC
 
 ### Coming Soon
-- 🔜 OpenID Connect authentication with RBAC (Phase 4)
 - 🔜 Production hardening and monitoring (Phase 5)
 
 ## Quick Start
@@ -101,6 +101,11 @@ Harbor Gate uses Docker labels to configure routing:
 | `HARBORGATE_HTTP_PORT` | `80` | HTTP port to listen on |
 | `HARBORGATE_HTTPS_PORT` | `443` | HTTPS port (Phase 3) |
 | `HARBORGATE_LOG_LEVEL` | `Information` | Logging level |
+| `HARBORGATE_OIDC_ENABLED` | `false` | Enable OpenID Connect authentication (Phase 4) |
+| `HARBORGATE_OIDC_AUTHORITY` | - | OIDC Authority URL (e.g., https://accounts.google.com) |
+| `HARBORGATE_OIDC_CLIENT_ID` | - | OAuth 2.0 Client ID |
+| `HARBORGATE_OIDC_CLIENT_SECRET` | - | OAuth 2.0 Client Secret |
+| `HARBORGATE_OIDC_CALLBACK_PATH` | `/signin-oidc` | OIDC callback path |
 
 ## How It Works
 
@@ -206,8 +211,15 @@ services:
     image: harborgate:latest
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./certs:/var/lib/harborgate/certs
+    environment:
+      - HARBORGATE_OIDC_ENABLED=true
+      - HARBORGATE_OIDC_AUTHORITY=https://auth.example.com
+      - HARBORGATE_OIDC_CLIENT_ID=harborgate
+      - HARBORGATE_OIDC_CLIENT_SECRET=your-secret
     networks:
       - web
 
@@ -216,6 +228,7 @@ services:
     labels:
       - "harborgate.enable=true"
       - "harborgate.host=app.example.com"
+      - "harborgate.tls=true"
     networks:
       - web
 
@@ -225,6 +238,9 @@ services:
       - "harborgate.enable=true"
       - "harborgate.host=api.example.com"
       - "harborgate.port=5000"
+      - "harborgate.tls=true"
+      - "harborgate.auth.enable=true"
+      - "harborgate.auth.roles=api-user"
     networks:
       - web
 
@@ -233,6 +249,9 @@ services:
     labels:
       - "harborgate.enable=true"
       - "harborgate.host=admin.example.com"
+      - "harborgate.tls=true"
+      - "harborgate.auth.enable=true"
+      - "harborgate.auth.roles=admin"
     networks:
       - web
 
