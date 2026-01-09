@@ -1,0 +1,66 @@
+services:
+  # Pebble - Let's Encrypt ACME test server
+  pebble:
+    image: ghcr.io/letsencrypt/pebble 
+    container_name: pebble
+    ports:
+      - "14000:14000"  # ACME directory
+      - "15000:15000"  # Management API
+    environment:
+      - PEBBLE_VA_NOSLEEP=1
+      - PEBBLE_VA_ALWAYS_VALID=1  # Skip DNS validation for testing
+    volumes:
+      - ./pebble-config.json:/test/config/pebble-config.json:ro
+    networks:
+      - pebble-test
+
+  # Harbor Gate for testing with Pebble
+  harborgate:
+    build:
+      context: .
+      dockerfile: src/HarborGate/Dockerfile
+    container_name: harborgate-pebble-test
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Pebble
+      - HARBORGATE_HTTP_PORT=80
+      - HARBORGATE_HTTPS_PORT=443
+      - HARBORGATE_LOG_LEVEL=Debug
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./certs-pebble:/app/certs
+    networks:
+      - pebble-test
+      - default
+    depends_on:
+      - pebble
+
+  # Test application 1
+  test-app-1:
+    image: traefik/whoami
+    container_name: test-app-1
+    labels:
+      - "harborgate.enable=true"
+      - "harborgate.host=app1.test.local"
+      - "harborgate.tls=true"
+    networks:
+      - default
+
+  # Test application 2
+  test-app-2:
+    image: traefik/whoami
+    container_name: test-app-2
+    labels:
+      - "harborgate.enable=true"
+      - "harborgate.host=app2.test.local"
+      - "harborgate.tls=true"
+    networks:
+      - default
+
+networks:
+  pebble-test:
+    driver: bridge
+  default:
+    driver: bridge

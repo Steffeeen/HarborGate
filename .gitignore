@@ -1,0 +1,80 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.swp
+*~
+
+# Rider
+.idea/
+
+# Visual Studio Code
+.vscode/
+
+# macOS
+.DS_Store
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa]rm/
+[Aa]rm64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# MSTest test Results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+
+# NuGet
+*.nupkg
+*.snupkg
+**/packages/*
+!**/packages/build/
+*.nuget.props
+*.nuget.targets
+
+# Certificate storage (local development)
+certificates/
+certs/
+certs-*/
+*.pfx
+*.pem
+*.crt
+*.key
+*.p12
+
+# Pebble testing artifacts
+.pebble-ca/
+pebble-config.json
+
+# Docker artifacts
+docker-compose.override.yml
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# ASP.NET Core
+appsettings.Development.json
+appsettings.Local.json
+*.Development.json
+*.Local.json
+
+# Data Protection Keys
+DataProtection-Keys/
