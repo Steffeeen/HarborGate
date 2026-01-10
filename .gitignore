@@ -42,7 +42,6 @@ bld/
 *.nuget.targets
 
 # Certificate storage (local development)
-certificates/
 certs/
 certs-*/
 *.pfx
