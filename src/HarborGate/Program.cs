@@ -13,10 +13,6 @@ var harborGateOptions = new HarborGateOptions();
 builder.Configuration.GetSection(HarborGateOptions.SectionName).Bind(harborGateOptions);
 
 // Override with environment variables if present
-if (!string.IsNullOrEmpty(builder.Configuration.GetValue<string>("HARBORGATE_DOCKER_SOCKET")))
-{
-    harborGateOptions.DockerSocket = builder.Configuration.GetValue<string>("HARBORGATE_DOCKER_SOCKET")!;
-}
 if (builder.Configuration.GetValue<int?>("HARBORGATE_HTTP_PORT") is { } httpPort)
 {
     harborGateOptions.HttpPort = httpPort;
