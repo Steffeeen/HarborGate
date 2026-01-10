@@ -87,6 +87,8 @@ builder.Logging.SetMinimumLevel(LogLevel.Debug);
 // Register HTTP challenge store for ACME
 builder.Services.AddSingleton<IHttpChallengeStore, HttpChallengeStore>();
 
+builder.Services.AddSingleton<OidcProviderValidator>();
+
 // Register certificate storage service
 builder.Services.AddSingleton(sp =>
 {
@@ -247,6 +249,43 @@ if (harborGateOptions.EnableHttps)
 // Load existing certificates from disk on startup
 var storage = app.Services.GetRequiredService<CertificateStorageService>();
 await storage.LoadCertificatesFromDiskAsync();
+
+// Validate OIDC provider if enabled
+if (harborGateOptions.Oidc.Enabled)
+{
+    app.Logger.LogInformation("Validating OIDC provider configuration...");
+    
+    var validator = app.Services.GetRequiredService<OidcProviderValidator>();
+    var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+    
+    try
+    {
+        var validationResult = await validator.ValidateAsync(harborGateOptions.Oidc, cts.Token);
+        
+        if (validationResult.IsValid)
+        {
+            app.Logger.LogInformation("✓ OIDC provider validation successful");
+        }
+        else
+        {
+            var errorMessage = string.Join("\n  - ", validationResult.Errors);
+            app.Logger.LogError("✗ OIDC provider validation FAILED. Errors:\n  - {Errors}", errorMessage);
+            app.Logger.LogError("Application will now exit due to invalid OIDC configuration.");
+            Environment.Exit(1);
+        }
+        
+        // Log warnings if any
+        foreach (var warning in validationResult.Warnings)
+        {
+            app.Logger.LogWarning("⚠ OIDC validation warning: {Warning}", warning);
+        }
+    }
+    catch (OperationCanceledException)
+    {
+        app.Logger.LogError("✗ OIDC provider validation timed out after 30 seconds. Application will now exit.");
+        Environment.Exit(1);
+    }
+}
 
 // Add HTTPS redirect middleware (must be before ACME challenge)
 // ACME challenge middleware will prevent redirects for /.well-known/acme-challenge/*

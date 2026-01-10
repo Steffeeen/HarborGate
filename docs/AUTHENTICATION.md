@@ -82,6 +82,46 @@ services:
 | `harborgate.auth.enable` | No | Enable authentication for this route | `true` |
 | `harborgate.auth.roles` | No | Required roles (comma-separated, any match grants access) | `admin,user` |
 
+## Startup Validation
+
+Harbor Gate **always validates** the OIDC provider configuration during startup to catch configuration errors early, before users attempt to authenticate.
+
+### How It Works
+
+When OIDC is enabled, Harbor Gate performs the following checks at startup (30-second timeout):
+
+1. **Discovery Document Fetch**: Fetches `{Authority}/.well-known/openid-configuration`
+2. **Endpoint Validation**: Verifies required endpoints exist (authorization, token, userinfo, jwks)
+3. **Connectivity Check**: Ensures the provider is reachable from the container
+4. **Configuration Validation**: Validates client credentials and settings format
+
+**If validation fails, the application will exit immediately** to prevent running with broken authentication.
+
+### Example Startup Logs
+
+**Successful Validation**:
+```
+info: Harbor Gate[0] Validating OIDC provider configuration...
+info: OidcProviderValidator[0] Fetching OIDC discovery document from: https://auth.example.com/.well-known/openid-configuration
+info: Harbor Gate[0] ✓ OIDC provider validation successful
+```
+
+**Failed Validation**:
+```
+info: Harbor Gate[0] Validating OIDC provider configuration...
+error: Harbor Gate[0] ✗ OIDC provider validation FAILED. Errors:
+  - Failed to connect to OIDC provider: Connection refused
+  - Authority: https://auth.example.com
+  - Check network connectivity and ensure the OIDC provider is accessible from this container/server.
+error: Harbor Gate[0] Application will now exit due to invalid OIDC configuration.
+```
+
+**Timeout**:
+```
+info: Harbor Gate[0] Validating OIDC provider configuration...
+error: Harbor Gate[0] ✗ OIDC provider validation timed out after 30 seconds. Application will now exit.
+```
+
 ## Authentication Flow
 
 1. **Unauthenticated Request**: User requests a protected route
