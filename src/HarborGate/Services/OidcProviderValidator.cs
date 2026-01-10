@@ -11,10 +11,10 @@ public class OidcProviderValidator
     private readonly ILogger<OidcProviderValidator> _logger;
     private readonly HttpClient _httpClient;
 
-    public OidcProviderValidator(ILogger<OidcProviderValidator> logger, IHttpClientFactory httpClientFactory)
+    public OidcProviderValidator(ILogger<OidcProviderValidator> logger)
     {
         _logger = logger;
-        _httpClient = httpClientFactory.CreateClient();
+        _httpClient = new HttpClient();
         _httpClient.Timeout = TimeSpan.FromSeconds(30);
     }
 
