@@ -113,7 +113,17 @@ builder.Services.AddSingleton<ICertificateProvider>(sp =>
     {
         var logger = sp.GetRequiredService<ILogger<LetsEncryptCertificateProvider>>();
         var challengeStore = sp.GetRequiredService<IHttpChallengeStore>();
-        return new LetsEncryptCertificateProvider(storage, logger, harborGateOptions.Ssl.LetsEncrypt, challengeStore);
+        
+        try
+        {
+            return new LetsEncryptCertificateProvider(storage, logger, harborGateOptions.Ssl.LetsEncrypt, challengeStore);
+        }
+        catch (InvalidOperationException ex)
+        {
+            Console.Error.WriteLine($"error: ✗ Let's Encrypt configuration error: {ex.Message}");
+            Environment.Exit(1);
+            throw; // Never reached, but required for compiler
+        }
     }
 
     throw new InvalidOperationException($"Unknown certificate provider: {providerType}");
