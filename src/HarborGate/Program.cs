@@ -12,53 +12,31 @@ var builder = WebApplication.CreateBuilder(args);
 var harborGateOptions = new HarborGateOptions();
 builder.Configuration.GetSection(HarborGateOptions.SectionName).Bind(harborGateOptions);
 
-// Override with environment variables if present
-if (builder.Configuration.GetValue<int?>("HARBORGATE_HTTP_PORT") is { } httpPort)
+T ReadConfig<T>(string key, T defaultValue)
 {
-    harborGateOptions.HttpPort = httpPort;
-}
-if (builder.Configuration.GetValue<int?>("HARBORGATE_HTTPS_PORT") is { } httpsPort)
-{
-    harborGateOptions.HttpsPort = httpsPort;
-}
-if (!string.IsNullOrEmpty(builder.Configuration.GetValue<string>("HARBORGATE_LOG_LEVEL")))
-{
-    harborGateOptions.LogLevel = builder.Configuration.GetValue<string>("HARBORGATE_LOG_LEVEL")!;
+    var value = builder.Configuration.GetValue<T>(key);
+
+    if (value is string s)
+    {
+        return !string.IsNullOrEmpty(s) ? (T) (object) s : defaultValue;
+    }
+    
+    return value ?? defaultValue;
 }
 
-// Override OIDC settings with environment variables if present
-if (builder.Configuration.GetValue<bool?>("HARBORGATE_OIDC_ENABLED") is { } oidcEnabled)
-{
-    harborGateOptions.Oidc.Enabled = oidcEnabled;
-}
-if (!string.IsNullOrEmpty(builder.Configuration.GetValue<string>("HARBORGATE_OIDC_AUTHORITY")))
-{
-    harborGateOptions.Oidc.Authority = builder.Configuration.GetValue<string>("HARBORGATE_OIDC_AUTHORITY")!;
-}
-if (!string.IsNullOrEmpty(builder.Configuration.GetValue<string>("HARBORGATE_OIDC_CLIENT_ID")))
-{
-    harborGateOptions.Oidc.ClientId = builder.Configuration.GetValue<string>("HARBORGATE_OIDC_CLIENT_ID")!;
-}
-if (!string.IsNullOrEmpty(builder.Configuration.GetValue<string>("HARBORGATE_OIDC_CLIENT_SECRET")))
-{
-    harborGateOptions.Oidc.ClientSecret = builder.Configuration.GetValue<string>("HARBORGATE_OIDC_CLIENT_SECRET")!;
-}
-if (!string.IsNullOrEmpty(builder.Configuration.GetValue<string>("HARBORGATE_OIDC_CALLBACK_PATH")))
-{
-    harborGateOptions.Oidc.CallbackPath = builder.Configuration.GetValue<string>("HARBORGATE_OIDC_CALLBACK_PATH")!;
-}
-if (!string.IsNullOrEmpty(builder.Configuration.GetValue<string>("HARBORGATE_OIDC_ROLE_CLAIM_TYPE")))
-{
-    harborGateOptions.Oidc.RoleClaimType = builder.Configuration.GetValue<string>("HARBORGATE_OIDC_ROLE_CLAIM_TYPE")!;
-}
-if (builder.Configuration.GetValue<bool?>("HARBORGATE_OIDC_SAVE_TOKENS") is { } saveTokens)
-{
-    harborGateOptions.Oidc.SaveTokens = saveTokens;
-}
-if (builder.Configuration.GetValue<bool?>("HARBORGATE_OIDC_REQUIRE_HTTPS_METADATA") is { } requireHttpsMetadata)
-{
-    harborGateOptions.Oidc.RequireHttpsMetadata = requireHttpsMetadata;
-}
+harborGateOptions.HttpPort = ReadConfig("HARBORGATE_HTTP_PORT", harborGateOptions.HttpPort);
+harborGateOptions.HttpsPort = ReadConfig("HARBORGATE_HTTPS_PORT", harborGateOptions.HttpsPort);
+
+harborGateOptions.LogLevel = ReadConfig("HARBORGATE_LOG_LEVEL", harborGateOptions.LogLevel);
+
+harborGateOptions.Oidc.Enabled = ReadConfig("HARBORGATE_OIDC_ENABLED", harborGateOptions.Oidc.Enabled);
+harborGateOptions.Oidc.Authority = ReadConfig("HARBORGATE_OIDC_AUTHORITY", harborGateOptions.Oidc.Authority);
+harborGateOptions.Oidc.ClientId = ReadConfig("HARBORGATE_OIDC_CLIENT_ID", harborGateOptions.Oidc.ClientId);
+harborGateOptions.Oidc.ClientSecret = ReadConfig("HARBORGATE_OIDC_CLIENT_SECRET", harborGateOptions.Oidc.ClientSecret);
+harborGateOptions.Oidc.CallbackPath = ReadConfig("HARBORGATE_OIDC_CALLBACK_PATH", harborGateOptions.Oidc.CallbackPath);
+harborGateOptions.Oidc.RoleClaimType = ReadConfig("HARBORGATE_OIDC_ROLE_CLAIM_TYPE", harborGateOptions.Oidc.RoleClaimType);
+harborGateOptions.Oidc.SaveTokens = ReadConfig("HARBORGATE_OIDC_SAVE_TOKENS", harborGateOptions.Oidc.SaveTokens);
+harborGateOptions.Oidc.RequireHttpsMetadata = ReadConfig("HARBORGATE_OIDC_REQUIRE_HTTPS_METADATA", harborGateOptions.Oidc.RequireHttpsMetadata);
 
 // Register the options for dependency injection
 builder.Services.AddSingleton(harborGateOptions);
