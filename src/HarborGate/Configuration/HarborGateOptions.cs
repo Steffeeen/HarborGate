@@ -140,4 +140,10 @@ public class OidcOptions
     /// WARNING: Only set to true for local development/testing! Production should always use HTTPS.
     /// </summary>
     public bool RequireHttpsMetadata { get; set; } = true;
+
+    /// <summary>
+    /// Skip OIDC provider validation on startup. Default: false
+    /// WARNING: Only set to true for E2E testing where OIDC provider might not be ready at startup!
+    /// </summary>
+    public bool SkipValidation { get; set; } = false;
 }

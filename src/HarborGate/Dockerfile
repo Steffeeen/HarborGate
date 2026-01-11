@@ -19,10 +19,11 @@ RUN dotnet publish "HarborGate.csproj" -c Release -o /app/publish /p:UseAppHost=
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 
-# Install ca-certificates and wget for Pebble root CA installation
+# Install ca-certificates, wget, and curl for health checks and Pebble root CA installation
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     wget \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Expose ports

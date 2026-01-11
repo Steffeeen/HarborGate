@@ -1,0 +1,71 @@
+services:
+  pebble:
+    image: ghcr.io/letsencrypt/pebble:latest
+    container_name: pebble
+    command: -config /test/config/pebble-config.json
+    environment:
+      - PEBBLE_VA_NOSLEEP=1
+      - PEBBLE_VA_ALWAYS_VALID=1
+    ports:
+      - "14000:14000"
+    volumes:
+      - ./pebble-config.json:/test/config/pebble-config.json:ro
+    networks:
+      - harborgate-ssl-test
+
+  harborgate:
+    build:
+      context: ..
+      dockerfile: src/HarborGate/Dockerfile
+    container_name: harborgate-ssl-test
+    depends_on:
+      - pebble
+    ports:
+      - "8080:80"
+      - "8443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ssl-test-certs:/app/certs
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Pebble
+      - HARBORGATE_HTTP_PORT=80
+      - HARBORGATE_HTTPS_PORT=443
+      - HARBORGATE_ENABLE_HTTPS=true
+      - HARBORGATE_LOG_LEVEL=Debug
+      - HARBORGATE_SSL_CERTIFICATE_PROVIDER=LetsEncrypt
+      - HARBORGATE_OIDC_ENABLED=false
+    networks:
+      - harborgate-ssl-test
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/_health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Test service for SSL certificate requests
+  test-ssl-app-1:
+    image: traefik/whoami
+    container_name: test-ssl-app-1
+    labels:
+      - "harborgate.enable=true"
+      - "harborgate.host=app1.ssl.test"
+      - "harborgate.tls=true"
+    networks:
+      - harborgate-ssl-test
+
+  test-ssl-app-2:
+    image: traefik/whoami
+    container_name: test-ssl-app-2
+    labels:
+      - "harborgate.enable=true"
+      - "harborgate.host=app2.ssl.test"
+      - "harborgate.tls=true"
+    networks:
+      - harborgate-ssl-test
+
+networks:
+  harborgate-ssl-test:
+    driver: bridge
+
+volumes:
+  ssl-test-certs:

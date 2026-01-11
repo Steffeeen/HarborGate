@@ -29,10 +29,12 @@ public class HttpsRedirectMiddleware
         // 2. Redirect is enabled
         // 3. Request is HTTP (not HTTPS)
         // 4. Request is not for ACME challenge (HTTP-01 must be served over HTTP)
+        // 5. Request is not for health check endpoint
         if (_options.EnableHttps &&
             _options.RedirectHttpToHttps &&
             !context.Request.IsHttps &&
-            !IsAcmeChallenge(context.Request.Path))
+            !IsAcmeChallenge(context.Request.Path) &&
+            !IsHealthCheck(context.Request.Path))
         {
             var httpsUrl = BuildHttpsUrl(context.Request);
             
@@ -56,6 +58,15 @@ public class HttpsRedirectMiddleware
     private static bool IsAcmeChallenge(PathString path)
     {
         return path.StartsWithSegments("/.well-known/acme-challenge");
+    }
+
+    /// <summary>
+    /// Check if the request is for the health check endpoint
+    /// Health checks should work over HTTP for Docker healthcheck compatibility
+    /// </summary>
+    private static bool IsHealthCheck(PathString path)
+    {
+        return path.StartsWithSegments("/_health");
     }
 
     /// <summary>

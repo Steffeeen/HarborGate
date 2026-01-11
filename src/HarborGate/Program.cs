@@ -26,8 +26,11 @@ T ReadConfig<T>(string key, T defaultValue)
 
 harborGateOptions.HttpPort = ReadConfig("HARBORGATE_HTTP_PORT", harborGateOptions.HttpPort);
 harborGateOptions.HttpsPort = ReadConfig("HARBORGATE_HTTPS_PORT", harborGateOptions.HttpsPort);
+harborGateOptions.EnableHttps = ReadConfig("HARBORGATE_ENABLE_HTTPS", harborGateOptions.EnableHttps);
 
 harborGateOptions.LogLevel = ReadConfig("HARBORGATE_LOG_LEVEL", harborGateOptions.LogLevel);
+
+harborGateOptions.Ssl.CertificateProvider = ReadConfig("HARBORGATE_SSL_CERTIFICATE_PROVIDER", harborGateOptions.Ssl.CertificateProvider);
 
 harborGateOptions.Oidc.Enabled = ReadConfig("HARBORGATE_OIDC_ENABLED", harborGateOptions.Oidc.Enabled);
 harborGateOptions.Oidc.Authority = ReadConfig("HARBORGATE_OIDC_AUTHORITY", harborGateOptions.Oidc.Authority);
@@ -37,6 +40,8 @@ harborGateOptions.Oidc.CallbackPath = ReadConfig("HARBORGATE_OIDC_CALLBACK_PATH"
 harborGateOptions.Oidc.RoleClaimType = ReadConfig("HARBORGATE_OIDC_ROLE_CLAIM_TYPE", harborGateOptions.Oidc.RoleClaimType);
 harborGateOptions.Oidc.SaveTokens = ReadConfig("HARBORGATE_OIDC_SAVE_TOKENS", harborGateOptions.Oidc.SaveTokens);
 harborGateOptions.Oidc.RequireHttpsMetadata = ReadConfig("HARBORGATE_OIDC_REQUIRE_HTTPS_METADATA", harborGateOptions.Oidc.RequireHttpsMetadata);
+harborGateOptions.Oidc.SkipValidation = ReadConfig("HARBORGATE_OIDC_SKIP_VALIDATION", harborGateOptions.Oidc.SkipValidation);
+harborGateOptions.Oidc.SkipValidation = ReadConfig("HARBORGATE_OIDC_SKIP_VALIDATION", harborGateOptions.Oidc.SkipValidation);
 
 // Register the options for dependency injection
 builder.Services.AddSingleton(harborGateOptions);
@@ -63,48 +68,58 @@ builder.Services.AddSingleton<IHttpChallengeStore, HttpChallengeStore>();
 
 builder.Services.AddSingleton<OidcProviderValidator>();
 
-// Register certificate storage service
-builder.Services.AddSingleton(sp =>
+// Register certificate storage service (only if HTTPS is enabled)
+if (harborGateOptions.EnableHttps)
 {
-    var logger = sp.GetRequiredService<ILogger<CertificateStorageService>>();
-    var storagePath = harborGateOptions.Ssl.CertificateStoragePath;
-    return new CertificateStorageService(logger, storagePath);
-});
+    builder.Services.AddSingleton(sp =>
+    {
+        var logger = sp.GetRequiredService<ILogger<CertificateStorageService>>();
+        var storagePath = harborGateOptions.Ssl.CertificateStoragePath;
+        return new CertificateStorageService(logger, storagePath);
+    });
+}
 
-// Register certificate provider based on configuration
-builder.Services.AddSingleton<ICertificateProvider>(sp =>
+
+// Register certificate provider based on configuration (only if HTTPS is enabled)
+if (harborGateOptions.EnableHttps)
 {
-    var storage = sp.GetRequiredService<CertificateStorageService>();
-    var providerType = harborGateOptions.Ssl.CertificateProvider;
-    
-    if (providerType.Equals("SelfSigned", StringComparison.OrdinalIgnoreCase))
+    builder.Services.AddSingleton<ICertificateProvider>(sp =>
     {
-        var logger = sp.GetRequiredService<ILogger<SelfSignedCertificateProvider>>();
-        return new SelfSignedCertificateProvider(storage, logger);
-    }
-
-    if (providerType.Equals("LetsEncrypt", StringComparison.OrdinalIgnoreCase))
-    {
-        var logger = sp.GetRequiredService<ILogger<LetsEncryptCertificateProvider>>();
-        var challengeStore = sp.GetRequiredService<IHttpChallengeStore>();
+        var storage = sp.GetRequiredService<CertificateStorageService>();
+        var providerType = harborGateOptions.Ssl.CertificateProvider;
         
-        try
+        if (providerType.Equals("SelfSigned", StringComparison.OrdinalIgnoreCase))
         {
-            return new LetsEncryptCertificateProvider(storage, logger, harborGateOptions.Ssl.LetsEncrypt, challengeStore);
+            var logger = sp.GetRequiredService<ILogger<SelfSignedCertificateProvider>>();
+            return new SelfSignedCertificateProvider(storage, logger);
         }
-        catch (InvalidOperationException ex)
+
+        if (providerType.Equals("LetsEncrypt", StringComparison.OrdinalIgnoreCase))
         {
-            Console.Error.WriteLine($"error: ✗ Let's Encrypt configuration error: {ex.Message}");
-            Environment.Exit(1);
-            throw; // Never reached, but required for compiler
+            var logger = sp.GetRequiredService<ILogger<LetsEncryptCertificateProvider>>();
+            var challengeStore = sp.GetRequiredService<IHttpChallengeStore>();
+            
+            try
+            {
+                return new LetsEncryptCertificateProvider(storage, logger, harborGateOptions.Ssl.LetsEncrypt, challengeStore);
+            }
+            catch (InvalidOperationException ex)
+            {
+                Console.Error.WriteLine($"error: ✗ Let's Encrypt configuration error: {ex.Message}");
+                Environment.Exit(1);
+                throw; // Never reached, but required for compiler
+            }
         }
-    }
 
-    throw new InvalidOperationException($"Unknown certificate provider: {providerType}");
-});
+        throw new InvalidOperationException($"Unknown certificate provider: {providerType}");
+    });
+}
 
-// Register dynamic certificate selector
-builder.Services.AddSingleton<DynamicCertificateSelector>();
+// Register dynamic certificate selector (only if HTTPS is enabled)
+if (harborGateOptions.EnableHttps)
+{
+    builder.Services.AddSingleton<DynamicCertificateSelector>();
+}
 
 // Register services
 builder.Services.AddSingleton<RouteConfigurationService>();
@@ -121,8 +136,11 @@ builder.Services.AddSingleton<IDockerClientWrapper>(sp =>
 // Register Docker monitor service
 builder.Services.AddHostedService<DockerMonitorService>();
 
-// Register certificate renewal service
-builder.Services.AddHostedService<CertificateRenewalService>();
+// Register certificate renewal service (only if HTTPS is enabled)
+if (harborGateOptions.EnableHttps)
+{
+    builder.Services.AddHostedService<CertificateRenewalService>();
+}
 
 // Configure Authentication and Authorization
 if (harborGateOptions.Oidc.Enabled)
@@ -230,44 +248,54 @@ if (harborGateOptions.EnableHttps)
     certificateSelectorHolder.Selector = app.Services.GetRequiredService<DynamicCertificateSelector>();
 }
 
-// Load existing certificates from disk on startup
-var storage = app.Services.GetRequiredService<CertificateStorageService>();
-await storage.LoadCertificatesFromDiskAsync();
+// Load existing certificates from disk on startup (only if HTTPS is enabled)
+if (harborGateOptions.EnableHttps)
+{
+    var storage = app.Services.GetRequiredService<CertificateStorageService>();
+    await storage.LoadCertificatesFromDiskAsync();
+}
 
 // Validate OIDC provider if enabled
 if (harborGateOptions.Oidc.Enabled)
 {
-    app.Logger.LogInformation("Validating OIDC provider configuration...");
-    
-    var validator = app.Services.GetRequiredService<OidcProviderValidator>();
-    var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-    
-    try
+    if (harborGateOptions.Oidc.SkipValidation)
     {
-        var validationResult = await validator.ValidateAsync(harborGateOptions.Oidc, cts.Token);
+        app.Logger.LogWarning("⚠ OIDC provider validation SKIPPED (HARBORGATE_OIDC_SKIP_VALIDATION=true). Use only for testing!");
+    }
+    else
+    {
+        app.Logger.LogInformation("Validating OIDC provider configuration...");
         
-        if (validationResult.IsValid)
+        var validator = app.Services.GetRequiredService<OidcProviderValidator>();
+        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        
+        try
         {
-            app.Logger.LogInformation("✓ OIDC provider validation successful");
+            var validationResult = await validator.ValidateAsync(harborGateOptions.Oidc, cts.Token);
+            
+            if (validationResult.IsValid)
+            {
+                app.Logger.LogInformation("✓ OIDC provider validation successful");
+            }
+            else
+            {
+                var errorMessage = string.Join("\n  - ", validationResult.Errors);
+                app.Logger.LogError("✗ OIDC provider validation FAILED. Errors:\n  - {Errors}", errorMessage);
+                app.Logger.LogError("Application will now exit due to invalid OIDC configuration.");
+                Environment.Exit(1);
+            }
+            
+            // Log warnings if any
+            foreach (var warning in validationResult.Warnings)
+            {
+                app.Logger.LogWarning("⚠ OIDC validation warning: {Warning}", warning);
+            }
         }
-        else
+        catch (OperationCanceledException)
         {
-            var errorMessage = string.Join("\n  - ", validationResult.Errors);
-            app.Logger.LogError("✗ OIDC provider validation FAILED. Errors:\n  - {Errors}", errorMessage);
-            app.Logger.LogError("Application will now exit due to invalid OIDC configuration.");
+            app.Logger.LogError("✗ OIDC provider validation timed out after 30 seconds. Application will now exit.");
             Environment.Exit(1);
         }
-        
-        // Log warnings if any
-        foreach (var warning in validationResult.Warnings)
-        {
-            app.Logger.LogWarning("⚠ OIDC validation warning: {Warning}", warning);
-        }
-    }
-    catch (OperationCanceledException)
-    {
-        app.Logger.LogError("✗ OIDC provider validation timed out after 30 seconds. Application will now exit.");
-        Environment.Exit(1);
     }
 }
 

@@ -2,4 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/HarborGate/HarborGate.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/HarborGate.E2ETests/HarborGate.E2ETests.csproj" />
+  </Folder>
 </Solution>
