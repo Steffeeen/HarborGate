@@ -124,9 +124,7 @@ builder.Services.AddSingleton<RouteConfigurationService>();
 builder.Services.AddSingleton<IDockerClientWrapper>(sp =>
 {
     var logger = sp.GetRequiredService<ILogger<DockerClientWrapper>>();
-    var dockerSocket = builder.Configuration.GetValue<string>("HARBORGATE_DOCKER_SOCKET") 
-                      ?? "/var/run/docker.sock";
-    return new DockerClientWrapper(dockerSocket, logger);
+    return new DockerClientWrapper(harborGateOptions.DockerSocket, logger);
 });
 
 // Register Docker monitor service

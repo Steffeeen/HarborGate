@@ -101,7 +101,6 @@ Harbor Gate can be configured via environment variables.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `HARBORGATE_DOCKER_SOCKET` | `/var/run/docker.sock` | Path to Docker socket |
 | `HARBORGATE_HTTP_PORT` | `80` | HTTP port to listen on |
 | `HARBORGATE_HTTPS_PORT` | `443` | HTTPS port to listen on |
 | `HARBORGATE_ENABLE_HTTPS` | `false` | Enable HTTPS support |
