@@ -70,9 +70,7 @@ docker-compose.override.yml
 *.sln.docstates
 
 # ASP.NET Core
-appsettings.Development.json
 appsettings.Local.json
-*.Development.json
 *.Local.json
 
 # Data Protection Keys

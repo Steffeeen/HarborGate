@@ -1,226 +1,18 @@
 # Harbor Gate
 
-A reverse proxy built with C# and .NET, inspired by Traefik. Harbor Gate provides automatic service discovery via Docker labels, SSL certificate management through Let's Encrypt, and OpenID Connect authentication.
+A reverse proxy built with C# and ASP.NET Core with automatic service discovery via Docker labels, SSL/TLS certificate management, and OpenID Connect authentication.
 
 Built mostly using Claude Sonnet 4.5 with [opencode](https://opencode.ai/).
 
 ## Features
 
-### Phase 1 & 2 & 3 & 4 (Complete)
-- ✅ Dynamic reverse proxy using YARP (Yet Another Reverse Proxy)
-- ✅ Docker label-based configuration
-- ✅ Automatic port discovery
-- ✅ Hot-reload routes without restart
-- ✅ Real-time Docker container monitoring
-- ✅ Automatic SSL/TLS certificates from Let's Encrypt
-- ✅ HTTP to HTTPS automatic redirect (like Traefik)
-- ✅ SNI-based certificate selection
-- ✅ OpenID Connect authentication with RBAC
-
-### Coming Soon
-- 🔜 Production hardening and monitoring (Phase 5)
+- **Dynamic Routing**: Automatic service discovery through Docker labels
+- **SSL/TLS**: Let's Encrypt integration with automatic renewal
+- **Authentication**: OpenID Connect with role-based access control (RBAC)
 
 ## Quick Start
 
-### Option 1: Run Locally (Development)
-
-The fastest way to get started during development:
-
-```bash
-# 1. Start test containers
-./scripts/start-test-containers.sh
-
-# 2. Run Harbor Gate
-cd src/HarborGate
-dotnet run
-
-# 3. Test the routes
-curl -H "Host: whoami1.localhost" http://localhost:8080
-```
-
-See [DEVELOPMENT.md](docs/DEVELOPMENT.md) for detailed local development instructions.
-
-### Option 2: Using Docker Compose
-
-1. Clone the repository
-2. Create a `docker-compose.yml` file:
-
-```yaml
-services:
-  harborgate:
-    image: harborgate:latest
-    ports:
-      - "80:80"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    networks:
-      - harborgate
-
-  # Your backend service
-  myapp:
-    image: traefik/whoami
-    labels:
-      - "harborgate.enable=true"
-      - "harborgate.host=myapp.localhost"
-    networks:
-      - harborgate
-
-networks:
-  harborgate:
-    driver: bridge
-```
-
-3. Build and run:
-
-```bash
-docker-compose up -d
-```
-
-4. Access your service at `http://myapp.localhost`
-
-## Configuration
-
-### Docker Labels
-
-Harbor Gate uses Docker labels to configure routing:
-
-| Label | Required | Description | Example |
-|-------|----------|-------------|---------|
-| `harborgate.enable` | Yes | Enable Harbor Gate for this container | `true` |
-| `harborgate.host` | Yes | The hostname/domain for routing | `myapp.example.com` |
-| `harborgate.port` | No | Target port (auto-discovered if not set) | `8080` |
-| `harborgate.tls` | No | Enable TLS (Phase 3) | `true` |
-| `harborgate.auth.enable` | No | Require authentication (Phase 4) | `true` |
-| `harborgate.auth.roles` | No | Required roles for RBAC (Phase 4) | `admin,user` |
-
-### Environment Variables
-
-Harbor Gate can be configured via environment variables.
-
-#### Core Settings
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `HARBORGATE_HTTP_PORT` | `80` | HTTP port to listen on |
-| `HARBORGATE_HTTPS_PORT` | `443` | HTTPS port to listen on |
-| `HARBORGATE_ENABLE_HTTPS` | `false` | Enable HTTPS support |
-| `HARBORGATE_LOG_LEVEL` | `Information` | Logging level (Trace, Debug, Information, Warning, Error, Critical) |
-
-#### SSL/TLS Configuration
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `HARBORGATE_ACME_EMAIL` | - | **Required for Let's Encrypt.** Email address for ACME account registration |
-| `HARBORGATE_ACME_ACCEPT_TOS` | `false` | **Required for Let's Encrypt.** Accept Let's Encrypt Terms of Service (must be `true`) |
-
-#### OpenID Connect Authentication
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `HARBORGATE_OIDC_ENABLED` | `false` | Enable OpenID Connect authentication |
-| `HARBORGATE_OIDC_AUTHORITY` | - | **Required if OIDC enabled.** OIDC Authority URL (e.g., https://accounts.google.com) |
-| `HARBORGATE_OIDC_CLIENT_ID` | - | **Required if OIDC enabled.** OAuth 2.0 Client ID |
-| `HARBORGATE_OIDC_CLIENT_SECRET` | - | **Required if OIDC enabled.** OAuth 2.0 Client Secret |
-| `HARBORGATE_OIDC_ROLE_CLAIM_TYPE` | `role` | Claim type to use for role-based access control |
-
-
-## How It Works
-
-1. **Container Discovery**: Harbor Gate monitors the Docker socket for container start/stop events
-2. **Label Parsing**: Extracts `harborgate.*` labels from running containers
-3. **Port Discovery**: Automatically detects exposed ports or uses the specified port
-4. **Route Configuration**: Builds YARP routes dynamically: `{host} -> http://{container_ip}:{port}`
-5. **Hot Reload**: Updates routes in real-time without restarting
-
-## Architecture
-
-```
-┌─────────────────────────────────────┐
-│         Harbor Gate                 │
-│  ┌──────────────────────────────┐   │
-│  │    ASP.NET Core + YARP       │   │
-│  │   (Reverse Proxy Engine)     │   │
-│  └──────────────────────────────┘   │
-│  ┌──────────────────────────────┐   │
-│  │  Docker Monitor Service      │   │
-│  │  - Watches container events  │   │
-│  │  - Parses labels             │   │
-│  │  - Discovers ports           │   │
-│  │  - Updates routes            │   │
-│  └──────────────────────────────┘   │
-└─────────────────────────────────────┘
-         │                    │
-         │ Docker API         │ HTTP
-         ▼                    ▼
-    Docker Socket       Backend Containers
-```
-
-## Development
-
-### Prerequisites
-- .NET 10 SDK
-- Docker
-
-### Build from source
-
-```bash
-# Clone repository
-git clone <repository-url>
-cd HarborGate
-
-# Build
-dotnet build
-
-# Run locally (requires Docker socket access)
-dotnet run --project src/HarborGate
-```
-
-### Build Docker image
-
-```bash
-docker build -t harborgate:latest -f src/HarborGate/Dockerfile .
-```
-
-### Development with docker-compose
-
-```bash
-# Use the development compose file
-docker-compose -f docker-compose.dev.yml up --build
-
-# Test with curl
-curl -H "Host: test1.localhost" http://localhost:8080
-```
-
-## Examples
-
-### Example 1: Simple Web Application
-
-```yaml
-webapp:
-  image: mywebapp:latest
-  labels:
-    - "harborgate.enable=true"
-    - "harborgate.host=webapp.example.com"
-  networks:
-    - harborgate
-```
-
-### Example 2: API with Explicit Port
-
-```yaml
-api:
-  image: myapi:latest
-  expose:
-    - "8080"
-  labels:
-    - "harborgate.enable=true"
-    - "harborgate.host=api.example.com"
-    - "harborgate.port=8080"
-  networks:
-    - harborgate
-```
-
-### Example 3: Multiple Services
+### Using Docker Compose
 
 ```yaml
 services:
@@ -233,6 +25,11 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./certs:/var/lib/harborgate/certs
     environment:
+      # SSL/TLS Configuration
+      - HARBORGATE_ENABLE_HTTPS=true
+      - HARBORGATE_ACME_EMAIL=your-email@example.com
+      - HARBORGATE_ACME_ACCEPT_TOS=true
+      # OpenID Connect Authentication (optional)
       - HARBORGATE_OIDC_ENABLED=true
       - HARBORGATE_OIDC_AUTHORITY=https://auth.example.com
       - HARBORGATE_OIDC_CLIENT_ID=harborgate
@@ -240,6 +37,7 @@ services:
     networks:
       - web
 
+  # Public application (no authentication required)
   frontend:
     image: nginx:alpine
     labels:
@@ -249,18 +47,7 @@ services:
     networks:
       - web
 
-  backend:
-    image: myapi:latest
-    labels:
-      - "harborgate.enable=true"
-      - "harborgate.host=api.example.com"
-      - "harborgate.port=5000"
-      - "harborgate.tls=true"
-      - "harborgate.auth.enable=true"
-      - "harborgate.auth.roles=api-user"
-    networks:
-      - web
-
+  # Protected application (requires authentication and specific role)
   admin:
     image: admin-panel:latest
     labels:
@@ -277,51 +64,94 @@ networks:
     driver: bridge
 ```
 
-## Troubleshooting
+Start the stack:
 
-### Routes not updating
-
-Check Harbor Gate logs:
 ```bash
-docker logs harborgate
+docker-compose up -d
 ```
 
-Verify Docker socket is mounted:
+This example shows:
+- **Public route**: `https://app.example.com` (no authentication)
+- **Protected route**: `https://api.example.com` (requires `api-user` role)
+- **Admin route**: `https://admin.example.com` (requires `admin` role)
+
+## Docker Labels
+
+Configure services using Docker labels:
+
+| Label | Required | Description | Example |
+|-------|----------|-------------|---------|
+| `harborgate.enable` | Yes | Enable Harbor Gate for this container | `true` |
+| `harborgate.host` | Yes | Hostname/domain for routing | `myapp.example.com` |
+| `harborgate.port` | No | Target port (auto-discovered if not set) | `8080` |
+| `harborgate.tls` | No | Enable TLS for this route | `true` |
+| `harborgate.auth.enable` | No | Require authentication | `true` |
+| `harborgate.auth.roles` | No | Required roles (comma-separated, OR logic) | `admin,user` |
+
+## Environment Variables
+
+### Core Settings
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `HARBORGATE_HTTP_PORT` | `80` | HTTP port |
+| `HARBORGATE_HTTPS_PORT` | `443` | HTTPS port |
+| `HARBORGATE_ENABLE_HTTPS` | `false` | Enable HTTPS |
+| `HARBORGATE_LOG_LEVEL` | `Information` | Log level (Trace, Debug, Information, Warning, Error, Critical) |
+
+### SSL/TLS Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `HARBORGATE_ACME_EMAIL` | - | **Required for Let's Encrypt.** Email for ACME account |
+| `HARBORGATE_ACME_ACCEPT_TOS` | `false` | **Required for Let's Encrypt.** Must be `true` to accept Terms of Service |
+
+### OpenID Connect Authentication
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `HARBORGATE_OIDC_ENABLED` | `false` | Enable OIDC authentication |
+| `HARBORGATE_OIDC_AUTHORITY` | - | **Required if enabled.** OIDC authority URL (e.g., https://accounts.google.com) |
+| `HARBORGATE_OIDC_CLIENT_ID` | - | **Required if enabled.** OAuth 2.0 Client ID |
+| `HARBORGATE_OIDC_CLIENT_SECRET` | - | **Required if enabled.** OAuth 2.0 Client Secret |
+| `HARBORGATE_OIDC_ROLE_CLAIM_TYPE` | `role` | Claim type for RBAC |
+
+## Development
+
+See [DEVELOPMENT.md](docs/DEVELOPMENT.md) for local development setup, testing, and architecture details.
+
+### Build from Source
+
 ```bash
-docker inspect harborgate | grep docker.sock
+git clone <repository-url>
+cd HarborGate
+dotnet build
 ```
 
-### Container not accessible
+### Build Docker Image
 
-1. Ensure the container is on the same Docker network as Harbor Gate
-2. Check that the container has `harborgate.enable=true` label
-3. Verify the container is running: `docker ps`
-4. Check Harbor Gate logs for errors
-
-### Port discovery issues
-
-If you have multiple exposed ports, explicitly specify the port:
-```yaml
-labels:
-  - "harborgate.port=8080"
+```bash
+docker build -t harborgate:latest -f src/HarborGate/Dockerfile .
 ```
 
-## Project Roadmap
+### Run Tests
 
-See [PROJECT_PLAN.md](PROJECT_PLAN.md) for the complete development roadmap including all 5 phases.
+> [!NOTE]
+> Running the full test suite takes approximately 20 minutes as it includes comprehensive E2E tests for routing, SSL/TLS, authentication, and WebSockets.
+
+```bash
+cd tests
+./run-tests.sh all
+```
 
 ## Technology Stack
 
 - **.NET 10** - Runtime and SDK
 - **YARP** - Microsoft's reverse proxy library
-- **Docker.DotNet** - Docker API client
-- **Certes** - ACME/Let's Encrypt client (Phase 3)
-- **ASP.NET Core Authentication** - OpenID Connect (Phase 4)
+- **[Docker.DotNet](https://github.com/dotnet/Docker.DotNet)** - Docker API client
+- **[Certes](https://github.com/fszlin/certes)** - ACME/Let's Encrypt client
+- **ASP.NET Core Authentication** - OpenID Connect support
 
 ## License
 
 TBD
-
-## Contributing
-
-This project is in active development. Contributions will be welcome once Phase 5 is complete.
