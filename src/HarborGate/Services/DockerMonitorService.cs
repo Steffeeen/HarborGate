@@ -1,3 +1,4 @@
+using HarborGate.Configuration;
 using HarborGate.Docker;
 using HarborGate.Models;
 
@@ -11,15 +12,18 @@ public class DockerMonitorService : BackgroundService
     private readonly IDockerClientWrapper _dockerClient;
     private readonly RouteConfigurationService _routeService;
     private readonly ILogger<DockerMonitorService> _logger;
+    private readonly HarborGateOptions _options;
 
     public DockerMonitorService(
         IDockerClientWrapper dockerClient,
         RouteConfigurationService routeService,
-        ILogger<DockerMonitorService> logger)
+        ILogger<DockerMonitorService> logger,
+        HarborGateOptions options)
     {
         _dockerClient = dockerClient;
         _routeService = routeService;
         _logger = logger;
+        _options = options;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -142,6 +146,15 @@ public class DockerMonitorService : BackgroundService
         _logger.LogInformation(
             "Route configured for container {ContainerName} ({ContainerId}): {Host} -> {Destination}",
             container.Name, container.Id[..12], route.Host, route.DestinationUrl);
+
+        // Warn if authentication is required but OIDC is not enabled globally
+        if (route.Auth?.Enable == true && !_options.Oidc.Enabled)
+        {
+            _logger.LogWarning(
+                "Container {ContainerName} ({ContainerId}) has harborgate.auth.enable=true, but OIDC is DISABLED globally (HARBORGATE_OIDC_ENABLED=false). " +
+                "This route will NOT be protected and will allow unauthenticated access!",
+                container.Name, container.Id[..12]);
+        }
 
         return Task.CompletedTask;
     }
