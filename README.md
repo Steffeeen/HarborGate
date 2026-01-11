@@ -154,4 +154,4 @@ cd tests
 
 ## License
 
-TBD
+MIT License. See [LICENSE](LICENSE) for details.
