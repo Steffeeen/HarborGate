@@ -1,25 +1,9 @@
 # Future Improvements
 
-This document tracks ideas for enhancing Harbor Gate beyond the core Phase 5 implementation.
+This document tracks ideas for enhancing Harbor Gate.
+Most of the ideas were suggested by Claude Sonnet which also wrote most of the file.
 
 ## Authentication & Authorization
-
-### OIDC Provider Validation at Startup
-**Priority**: High  
-**Description**: Validate OIDC provider connectivity and configuration during application startup instead of waiting for the first authentication attempt.
-
-**Implementation Ideas**:
-- Fetch and validate `.well-known/openid-configuration` endpoint on startup
-- Verify client credentials can authenticate with the provider
-- Validate that the `RoleClaimType` exists in the provider's token claims
-- Add a startup health check that fails if OIDC is enabled but misconfigured
-- Log detailed error messages with troubleshooting steps
-- Option to fail fast (exit) or degrade gracefully (disable auth, log warnings)
-
-**Benefits**:
-- Catch configuration errors immediately during deployment
-- Prevent runtime surprises when users try to authenticate
-- Better developer experience with clear error messages
 
 ### Custom Access Denied Page
 **Priority**: Medium  
@@ -177,22 +161,6 @@ HARBORGATE_CERT_ACQUISITION_TIMEOUT=300s
 - Send 503 responses to new requests during drain
 - Ensure Docker monitor and certificate renewal stop cleanly
 
-### Circuit Breaker for Backend Services
-**Priority**: Low  
-**Description**: Temporarily stop routing to backends that are consistently failing.
-
-**Implementation Ideas**:
-- Track failure rate per backend
-- Open circuit after N consecutive failures
-- Return 503 immediately while circuit is open
-- Periodically probe backend to close circuit
-- Log circuit state changes
-
-**Benefits**:
-- Faster failure responses (no waiting for backend timeout)
-- Reduce load on failing backends
-- Better user experience during partial outages
-
 ## Security
 
 ### Rate Limiting
@@ -333,16 +301,6 @@ labels:
   - "harborgate.loadbalance.strategy=round-robin"
 ```
 
-### WebSocket Support
-**Priority**: Medium  
-**Description**: Ensure WebSocket connections are properly proxied.
-
-**Implementation**:
-- YARP already supports WebSockets, but validate it works
-- Add explicit WebSocket upgrade header handling
-- Test with long-lived WebSocket connections
-- Document WebSocket usage in examples
-
 ### Request/Response Compression
 **Priority**: Low  
 **Description**: Compress responses to reduce bandwidth.
@@ -437,137 +395,7 @@ labels:
 
 **Format**: JSON with timestamp, event type, user, IP, details
 
-## Configuration & Deployment
-
-### Configuration File Support
-**Priority**: Low  
-**Description**: Support static configuration from YAML/JSON files in addition to Docker labels.
-
-**Use Cases**:
-- Non-Docker deployments
-- Static routes that don't change
-- Complex configurations easier to manage in files
-- Mix of file-based and Docker-based routes
-
-### Hot Reload for Configuration Files
-**Priority**: Low  
-**Description**: Watch configuration files for changes and reload without restart.
-
-### Multi-Architecture Docker Images
-**Priority**: Medium  
-**Description**: Build Docker images for multiple architectures.
-
-**Architectures**:
-- `linux/amd64` (x86_64)
-- `linux/arm64` (ARM64/aarch64)
-- `linux/arm/v7` (ARM32)
-
-**Benefits**:
-- Support Raspberry Pi and ARM servers
-- Apple Silicon Macs for local development
-- Cloud ARM instances (AWS Graviton, etc.)
-
-### Helm Chart for Kubernetes
-**Priority**: Low  
-**Description**: Official Helm chart for deploying Harbor Gate in Kubernetes.
-
-**Features**:
-- Ingress integration
-- ConfigMap for configuration
-- Secret management for OIDC credentials
-- Horizontal pod autoscaling support
-- ServiceMonitor for Prometheus
-
-## Testing
-
-### Integration Test Suite
-**Priority**: High (Phase 5)**  
-**Description**: Automated tests for key scenarios.
-
-**Test Scenarios**:
-- Route discovery from Docker containers
-- SSL certificate issuance and renewal
-- OIDC authentication flow
-- Role-based authorization
-- Route hot-reloading
-- Graceful shutdown
-
-### Performance Testing
-**Priority**: Medium (Phase 5)**  
-**Description**: Benchmark Harbor Gate under load.
-
-**Metrics**:
-- Requests per second
-- Latency percentiles (p50, p95, p99)
-- Memory usage over time
-- CPU usage under load
-- Connection limits
-
-**Tools**: k6, wrk, or Apache Bench
-
-### Chaos Engineering
-**Priority**: Low  
-**Description**: Test Harbor Gate's resilience to failures.
-
-**Scenarios**:
-- Backend container crashes mid-request
-- Docker socket becomes unavailable
-- OIDC provider goes down
-- Network partitions
-- Certificate renewal failures
-
-## Documentation
-
-### Video Tutorials
-**Priority**: Low  
-**Description**: Create video walkthroughs for common scenarios.
-
-**Topics**:
-- Getting started in 5 minutes
-- Setting up SSL with Let's Encrypt
-- Configuring authentication with Keycloak/Authentik
-- Troubleshooting common issues
-
-### API Documentation
-**Priority**: Low  
-**Description**: If management API is added, provide OpenAPI/Swagger docs.
-
-### Architecture Deep Dive
-**Priority**: Medium  
-**Description**: Detailed documentation of internal architecture for contributors.
-
-**Topics**:
-- YARP integration details
-- Certificate lifecycle management
-- Docker event processing
-- Authentication flow diagrams
-- Performance considerations
-
 ## Advanced Features
-
-### JWT Validation (Without OIDC)
-**Priority**: Low  
-**Description**: Validate JWT tokens directly without OIDC flow.
-
-**Use Case**: API gateway for services using JWT authentication
-
-**Label Schema**:
-```yaml
-labels:
-  - "harborgate.auth.type=jwt"
-  - "harborgate.auth.jwt.issuer=https://auth.example.com"
-  - "harborgate.auth.jwt.audience=my-api"
-```
-
-### Custom Authentication Providers
-**Priority**: Low  
-**Description**: Plugin system for custom authentication methods.
-
-**Examples**:
-- API keys
-- mTLS (client certificates)
-- LDAP
-- Custom token validation
 
 ### TCP/UDP Proxying
 **Priority**: Low  
@@ -598,14 +426,3 @@ labels:
 - Distributed cache support (Redis)
 - Cache invalidation strategies
 
----
-
-## Priority Legend
-
-- **High**: Should be implemented soon (Phase 5 or early Phase 6)
-- **Medium**: Valuable but not urgent
-- **Low**: Nice to have for future consideration
-
-## Contributing Ideas
-
-Have more ideas? Add them to this document or open an issue on GitHub!

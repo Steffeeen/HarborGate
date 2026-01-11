@@ -1,5 +1,7 @@
 # Harbor Gate - Project Plan
 
+This file is mostly meant for AI agents.
+
 ## Overview
 
 Harbor Gate is a reverse proxy built with C# and .NET, inspired by Traefik. It provides automatic service discovery via Docker labels, SSL certificate management through Let's Encrypt, and OpenID Connect authentication.
@@ -11,8 +13,8 @@ Harbor Gate Architecture
 ========================
 
 ┌─────────────────────────────────────────────────────────────┐
-│                      Harbor Gate Container                   │
-│                                                              │
+│                      Harbor Gate Container                  │
+│                                                             │
 │  ┌────────────────────────────────────────────────────────┐ │
 │  │              ASP.NET Core + YARP                       │ │
 │  │  ┌──────────────────────────────────────────────────┐  │ │
@@ -26,9 +28,9 @@ Harbor Gate Architecture
 │  │  │  Dynamic Route Matching & Forwarding             │  │ │
 │  │  └──────────────────────────────────────────────────┘  │ │
 │  └────────────────────────────────────────────────────────┘ │
-│                                                              │
+│                                                             │
 │  ┌────────────────────────────────────────────────────────┐ │
-│  │         Background Services (Hosted Services)         │ │
+│  │         Background Services (Hosted Services)          │ │
 │  │  ┌──────────────────────────────────────────────────┐  │ │
 │  │  │  Docker Monitor Service                          │  │ │
 │  │  │  - Watches Docker events                         │  │ │
@@ -44,11 +46,11 @@ Harbor Gate Architecture
 │  │  │  - Auto-renews certificates                      │  │ │
 │  │  └──────────────────────────────────────────────────┘  │ │
 │  └────────────────────────────────────────────────────────┘ │
-│                                                              │
+│                                                             │
 │  ┌────────────────────────────────────────────────────────┐ │
-│  │              Configuration Storage                    │ │
-│  │  - In-memory route configuration                     │ │
-│  │  - Certificate storage (file system)                 │  │
+│  │              Configuration Storage                     │ │
+│  │  - In-memory route configuration                       │ │
+│  │  - Certificate storage (file system)                   │ │
 │  └────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
          │                              │
@@ -402,55 +404,6 @@ services:
       - "harborgate.tls=false"
 ```
 
-## Future Enhancements (Beyond Phase 5)
-
-Potential features for future development:
-
-1. **Load Balancing**
-   - Multiple backend instances per route
-   - Health checks for backends
-   - Load balancing strategies (round-robin, least connections, etc.)
-
-2. **Advanced Routing**
-   - Path-based routing (not just host-based)
-   - Path prefix stripping
-   - Request/response header manipulation
-   - Custom middleware per route
-
-3. **Observability**
-   - Prometheus metrics endpoint
-   - Request tracing (OpenTelemetry)
-   - Admin dashboard/API
-   - Real-time route visualization
-
-4. **Security Features**
-   - Rate limiting per route
-   - IP whitelisting/blacklisting
-   - Request size limits
-   - DDoS protection
-
-5. **Certificate Features**
-   - DNS-01 challenge for wildcard certificates
-   - Support for custom/BYO certificates
-   - Multiple certificate authorities
-   - Certificate revocation handling
-
-6. **Authentication Enhancements**
-   - Multiple OIDC providers simultaneously
-   - Path whitelisting (skip auth for specific paths like `/health`)
-   - Custom authentication providers
-   - JWT validation
-
-7. **Configuration Sources**
-   - Configuration files (YAML/JSON)
-   - REST API for dynamic configuration
-   - Web UI for management
-
-8. **Protocol Support**
-   - WebSocket proxying
-   - gRPC support
-   - TCP/UDP proxying
-
 ## Technical Challenges & Solutions
 
 ### Challenge 1: YARP Dynamic Configuration
@@ -473,10 +426,3 @@ Potential features for future development:
 **Problem**: OIDC middleware is global, but auth needed per route  
 **Solution**: Custom middleware checks route metadata and enforces auth conditionally
 
-## Contributing
-
-This project is in active development. Contributions are welcome once Phase 5 is complete.
-
-## License
-
-TBD
