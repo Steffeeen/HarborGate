@@ -22,6 +22,7 @@ cleanup() {
     docker-compose -f docker-compose.routing.yml down -v 2>/dev/null || true
     docker-compose -f docker-compose.ssl.yml down -v 2>/dev/null || true
     docker-compose -f docker-compose.auth.yml down -v 2>/dev/null || true
+    docker-compose -f docker-compose.websocket.yml down -v 2>/dev/null || true
     docker-compose -f docker-compose.integration.yml down -v 2>/dev/null || true
 }
 
@@ -56,36 +57,50 @@ case $TEST_SUITE in
         dotnet test --filter "FullyQualifiedName~AuthenticationTests" --logger "console;verbosity=detailed"
         ;;
     
+    websocket)
+        echo -e "\n${COLOR_GREEN}Running WebSocket Tests...${COLOR_RESET}"
+        cd HarborGate.E2ETests
+        dotnet test --filter "FullyQualifiedName~WebSocketTests" --logger "console;verbosity=detailed"
+        ;;
+    
     all)
         echo -e "\n${COLOR_GREEN}Running ALL Tests...${COLOR_RESET}\n"
         
-        echo -e "${COLOR_BLUE}1/3: Routing Tests${COLOR_RESET}"
+        echo -e "${COLOR_BLUE}1/4: Routing Tests${COLOR_RESET}"
         cd HarborGate.E2ETests
         dotnet test --filter "FullyQualifiedName~RoutingTests" --logger "console;verbosity=normal"
         cd ..
         cleanup
         sleep 5
         
-        echo -e "\n${COLOR_BLUE}2/3: SSL Tests${COLOR_RESET}"
+        echo -e "\n${COLOR_BLUE}2/4: SSL Tests${COLOR_RESET}"
         cd HarborGate.E2ETests
         dotnet test --filter "FullyQualifiedName~SslTests" --logger "console;verbosity=normal"
         cd ..
         cleanup
         sleep 5
         
-        echo -e "\n${COLOR_BLUE}3/3: Authentication Tests${COLOR_RESET}"
+        echo -e "\n${COLOR_BLUE}3/4: Authentication Tests${COLOR_RESET}"
         cd HarborGate.E2ETests
         dotnet test --filter "FullyQualifiedName~AuthenticationTests" --logger "console;verbosity=normal"
+        cd ..
+        cleanup
+        sleep 5
+        
+        echo -e "\n${COLOR_BLUE}4/4: WebSocket Tests${COLOR_RESET}"
+        cd HarborGate.E2ETests
+        dotnet test --filter "FullyQualifiedName~WebSocketTests" --logger "console;verbosity=normal"
         cd ..
         ;;
     
     *)
         echo -e "${COLOR_RED}Error: Unknown test suite '$TEST_SUITE'${COLOR_RESET}"
-        echo -e "\nUsage: $0 [routing|ssl|auth|all]"
-        echo -e "  routing - Run routing tests only"
-        echo -e "  ssl     - Run SSL/certificate tests only"
-        echo -e "  auth    - Run authentication tests only"
-        echo -e "  all     - Run all test suites (default)"
+        echo -e "\nUsage: $0 [routing|ssl|auth|websocket|all]"
+        echo -e "  routing   - Run routing tests only"
+        echo -e "  ssl       - Run SSL/certificate tests only"
+        echo -e "  auth      - Run authentication tests only"
+        echo -e "  websocket - Run WebSocket tests only"
+        echo -e "  all       - Run all test suites (default)"
         exit 1
         ;;
 esac
