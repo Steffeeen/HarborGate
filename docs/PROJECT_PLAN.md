@@ -306,13 +306,13 @@ HarborGate/
 ├── README.md
 ├── PROJECT_PLAN.md
 ├── HarborGate.sln
-├── docker-compose.example.yml
 ├── docker-compose.dev.yml
-├── docs/                              # Phase 5
-│   ├── CONFIGURATION.md
-│   ├── EXAMPLES.md
-│   ├── TROUBLESHOOTING.md
-│   └── ARCHITECTURE.md
+├── docker-compose.auth.yml
+├── docs/
+│   ├── DEVELOPMENT.md
+│   ├── PROJECT_PLAN.md
+│   ├── FUTURE_IMPROVEMENTS.md
+│   └── docker-compose.pebble.yml
 ├── src/
 │   └── HarborGate/
 │       ├── HarborGate.csproj

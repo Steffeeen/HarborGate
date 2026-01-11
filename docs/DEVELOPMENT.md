@@ -315,7 +315,7 @@ Pebble is Let's Encrypt's ACME test server for local development.
 **Start Pebble environment:**
 
 ```bash
-docker-compose -f docker-compose.pebble.yml up -d
+docker-compose -f docs/docker-compose.pebble.yml up -d
 ```
 
 This starts:
