@@ -107,6 +107,13 @@ Harbor Gate can be configured via environment variables.
 | `HARBORGATE_ENABLE_HTTPS` | `false` | Enable HTTPS support |
 | `HARBORGATE_LOG_LEVEL` | `Information` | Logging level (Trace, Debug, Information, Warning, Error, Critical) |
 
+#### SSL/TLS Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `HARBORGATE_ACME_EMAIL` | - | **Required for Let's Encrypt.** Email address for ACME account registration |
+| `HARBORGATE_ACME_ACCEPT_TOS` | `false` | **Required for Let's Encrypt.** Accept Let's Encrypt Terms of Service (must be `true`) |
+
 #### OpenID Connect Authentication
 
 | Variable | Default | Description |

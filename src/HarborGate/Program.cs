@@ -30,6 +30,9 @@ harborGateOptions.EnableHttps = ReadConfig("HARBORGATE_ENABLE_HTTPS", harborGate
 
 harborGateOptions.LogLevel = ReadConfig("HARBORGATE_LOG_LEVEL", harborGateOptions.LogLevel);
 
+harborGateOptions.Ssl.LetsEncrypt.Email = ReadConfig("HARBORGATE_ACME_EMAIL", harborGateOptions.Ssl.LetsEncrypt.Email);
+harborGateOptions.Ssl.LetsEncrypt.AcceptTermsOfService = ReadConfig("HARBORGATE_ACME_ACCEPT_TOS", harborGateOptions.Ssl.LetsEncrypt.AcceptTermsOfService);
+
 harborGateOptions.Oidc.Enabled = ReadConfig("HARBORGATE_OIDC_ENABLED", harborGateOptions.Oidc.Enabled);
 harborGateOptions.Oidc.Authority = ReadConfig("HARBORGATE_OIDC_AUTHORITY", harborGateOptions.Oidc.Authority);
 harborGateOptions.Oidc.ClientId = ReadConfig("HARBORGATE_OIDC_CLIENT_ID", harborGateOptions.Oidc.ClientId);
