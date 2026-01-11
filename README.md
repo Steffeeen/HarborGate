@@ -95,17 +95,28 @@ Harbor Gate uses Docker labels to configure routing:
 
 ### Environment Variables
 
+Harbor Gate can be configured via environment variables.
+
+#### Core Settings
+
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `HARBORGATE_DOCKER_SOCKET` | `/var/run/docker.sock` | Path to Docker socket |
 | `HARBORGATE_HTTP_PORT` | `80` | HTTP port to listen on |
-| `HARBORGATE_HTTPS_PORT` | `443` | HTTPS port (Phase 3) |
-| `HARBORGATE_LOG_LEVEL` | `Information` | Logging level |
-| `HARBORGATE_OIDC_ENABLED` | `false` | Enable OpenID Connect authentication (Phase 4) |
-| `HARBORGATE_OIDC_AUTHORITY` | - | OIDC Authority URL (e.g., https://accounts.google.com) |
-| `HARBORGATE_OIDC_CLIENT_ID` | - | OAuth 2.0 Client ID |
-| `HARBORGATE_OIDC_CLIENT_SECRET` | - | OAuth 2.0 Client Secret |
-| `HARBORGATE_OIDC_CALLBACK_PATH` | `/signin-oidc` | OIDC callback path |
+| `HARBORGATE_HTTPS_PORT` | `443` | HTTPS port to listen on |
+| `HARBORGATE_ENABLE_HTTPS` | `false` | Enable HTTPS support |
+| `HARBORGATE_LOG_LEVEL` | `Information` | Logging level (Trace, Debug, Information, Warning, Error, Critical) |
+
+#### OpenID Connect Authentication
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `HARBORGATE_OIDC_ENABLED` | `false` | Enable OpenID Connect authentication |
+| `HARBORGATE_OIDC_AUTHORITY` | - | **Required if OIDC enabled.** OIDC Authority URL (e.g., https://accounts.google.com) |
+| `HARBORGATE_OIDC_CLIENT_ID` | - | **Required if OIDC enabled.** OAuth 2.0 Client ID |
+| `HARBORGATE_OIDC_CLIENT_SECRET` | - | **Required if OIDC enabled.** OAuth 2.0 Client Secret |
+| `HARBORGATE_OIDC_ROLE_CLAIM_TYPE` | `role` | Claim type to use for role-based access control |
+
 
 ## How It Works
 

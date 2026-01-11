@@ -30,18 +30,11 @@ harborGateOptions.EnableHttps = ReadConfig("HARBORGATE_ENABLE_HTTPS", harborGate
 
 harborGateOptions.LogLevel = ReadConfig("HARBORGATE_LOG_LEVEL", harborGateOptions.LogLevel);
 
-harborGateOptions.Ssl.CertificateProvider = ReadConfig("HARBORGATE_SSL_CERTIFICATE_PROVIDER", harborGateOptions.Ssl.CertificateProvider);
-
 harborGateOptions.Oidc.Enabled = ReadConfig("HARBORGATE_OIDC_ENABLED", harborGateOptions.Oidc.Enabled);
 harborGateOptions.Oidc.Authority = ReadConfig("HARBORGATE_OIDC_AUTHORITY", harborGateOptions.Oidc.Authority);
 harborGateOptions.Oidc.ClientId = ReadConfig("HARBORGATE_OIDC_CLIENT_ID", harborGateOptions.Oidc.ClientId);
 harborGateOptions.Oidc.ClientSecret = ReadConfig("HARBORGATE_OIDC_CLIENT_SECRET", harborGateOptions.Oidc.ClientSecret);
-harborGateOptions.Oidc.CallbackPath = ReadConfig("HARBORGATE_OIDC_CALLBACK_PATH", harborGateOptions.Oidc.CallbackPath);
 harborGateOptions.Oidc.RoleClaimType = ReadConfig("HARBORGATE_OIDC_ROLE_CLAIM_TYPE", harborGateOptions.Oidc.RoleClaimType);
-harborGateOptions.Oidc.SaveTokens = ReadConfig("HARBORGATE_OIDC_SAVE_TOKENS", harborGateOptions.Oidc.SaveTokens);
-harborGateOptions.Oidc.RequireHttpsMetadata = ReadConfig("HARBORGATE_OIDC_REQUIRE_HTTPS_METADATA", harborGateOptions.Oidc.RequireHttpsMetadata);
-harborGateOptions.Oidc.SkipValidation = ReadConfig("HARBORGATE_OIDC_SKIP_VALIDATION", harborGateOptions.Oidc.SkipValidation);
-harborGateOptions.Oidc.SkipValidation = ReadConfig("HARBORGATE_OIDC_SKIP_VALIDATION", harborGateOptions.Oidc.SkipValidation);
 
 // Register the options for dependency injection
 builder.Services.AddSingleton(harborGateOptions);

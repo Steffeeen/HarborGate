@@ -31,18 +31,15 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
+      - ASPNETCORE_ENVIRONMENT=Testing
       - HARBORGATE_HTTP_PORT=80
       - HARBORGATE_HTTPS_PORT=443
       - HARBORGATE_ENABLE_HTTPS=false
       - HARBORGATE_LOG_LEVEL=Debug
-      - HARBORGATE_SSL_CERTIFICATE_PROVIDER=SelfSigned
       - HARBORGATE_OIDC_ENABLED=true
       - HARBORGATE_OIDC_AUTHORITY=http://keycloak:8080/realms/harborgate
       - HARBORGATE_OIDC_CLIENT_ID=harborgate-test
       - HARBORGATE_OIDC_CLIENT_SECRET=test-secret-12345
-      - HARBORGATE_OIDC_CALLBACK_PATH=/signin-oidc
-      - HARBORGATE_OIDC_REQUIRE_HTTPS_METADATA=false
-      - HARBORGATE_OIDC_SKIP_VALIDATION=true
     networks:
       - harborgate-auth-test
     healthcheck:
