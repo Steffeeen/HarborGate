@@ -30,7 +30,7 @@ public class ConditionalAuthenticationMiddleware
         // Get the requested host
         var host = context.Request.Host.Host;
 
-        _logger.LogInformation("ConditionalAuthenticationMiddleware: Processing request for host: {Host}, Path: {Path}", 
+        _logger.LogDebug("ConditionalAuthenticationMiddleware: Processing request for host: {Host}, Path: {Path}", 
             host, context.Request.Path);
 
         // Find the route configuration for this host
@@ -44,24 +44,24 @@ public class ConditionalAuthenticationMiddleware
             return;
         }
 
-        _logger.LogInformation("Route found: {RouteId}, Auth enabled: {AuthEnabled}, Auth config: {AuthConfig}", 
+        _logger.LogDebug("Route found: {RouteId}, Auth enabled: {AuthEnabled}, Auth config: {AuthConfig}", 
             route.Id, route.Auth?.Enable, route.Auth != null ? "present" : "null");
 
         // If no route found or auth not enabled, continue without authentication check
         if (route?.Auth?.Enable != true)
         {
-            _logger.LogInformation("No authentication required for host: {Host}", host);
+            _logger.LogDebug("No authentication required for host: {Host}", host);
             await _next(context);
             return;
         }
 
-        _logger.LogInformation("Authentication IS REQUIRED for host: {Host}, Required roles: {Roles}",
+        _logger.LogDebug("Authentication IS REQUIRED for host: {Host}, Required roles: {Roles}",
             host, route.Auth.Roles != null ? string.Join(", ", route.Auth.Roles) : "none");
 
         // Check if user is authenticated
         if (!context.User.Identity?.IsAuthenticated ?? true)
         {
-            _logger.LogInformation("User not authenticated for protected route: {Host}", host);
+            _logger.LogDebug("User not authenticated for protected route: {Host}", host);
             
             // Trigger authentication challenge
             await context.ChallengeAsync();
