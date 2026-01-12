@@ -127,12 +127,12 @@ public class DockerClientWrapper : IDockerClientWrapper, IDisposable
         }
         catch (DockerContainerNotFoundException)
         {
-            _logger.LogDebug("Container {ContainerId} not found", containerId);
+            _logger.LogDebug("Container {ContainerId} not found", containerId[..12]);
             return null;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error inspecting container {ContainerId}", containerId);
+            _logger.LogError(ex, "Error inspecting container {ContainerId}", containerId[..12]);
             return null;
         }
     }

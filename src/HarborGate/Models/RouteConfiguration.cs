@@ -13,6 +13,11 @@ public class RouteConfiguration
     public required string Id { get; set; }
 
     /// <summary>
+    /// Container name (for logging purposes)
+    /// </summary>
+    public string? Name { get; set; }
+
+    /// <summary>
     /// The host/domain for this route
     /// </summary>
     public required string Host { get; set; }

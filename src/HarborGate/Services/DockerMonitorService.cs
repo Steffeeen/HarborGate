@@ -73,30 +73,31 @@ public class DockerMonitorService : BackgroundService
     /// </summary>
     private async Task OnContainerEventAsync(string containerId, string action)
     {
+        var containerIdShort = containerId[..12];
+        
         try
         {
             switch (action)
             {
                 case "start":
-                    _logger.LogDebug("Container started: {ContainerId}", containerId);
+                    _logger.LogDebug("Container started: {ContainerId}", containerIdShort);
                     await HandleContainerStartAsync(containerId);
                     break;
 
                 case "die":
                 case "stop":
                 case "destroy":
-                    _logger.LogDebug("Container stopped/removed: {ContainerId}", containerId);
-                    await HandleContainerStopAsync(containerId);
+                    await HandleContainerStopAsync(containerId, containerIdShort);
                     break;
 
                 default:
-                    _logger.LogDebug("Ignoring event {Action} for container {ContainerId}", action, containerId);
+                    _logger.LogDebug("Ignoring event {Action} for container {ContainerId}", action, containerIdShort);
                     break;
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error handling container event {Action} for {ContainerId}", action, containerId);
+            _logger.LogError(ex, "Error handling container event {Action} for {ContainerId}", action, containerIdShort);
         }
     }
 
@@ -119,8 +120,20 @@ public class DockerMonitorService : BackgroundService
     /// <summary>
     /// Handles container stop/removal event
     /// </summary>
-    private Task HandleContainerStopAsync(string containerId)
+    private Task HandleContainerStopAsync(string containerId, string containerIdShort)
     {
+        // Try to get the route to log the container name
+        var route = _routeService.GetAllRoutes().GetValueOrDefault(containerId);
+        if (route != null)
+        {
+            _logger.LogDebug("Container stopped/removed: {ContainerName} ({ContainerId})", 
+                route.Name ?? "unknown", containerIdShort);
+        }
+        else
+        {
+            _logger.LogDebug("Container stopped/removed: {ContainerId}", containerIdShort);
+        }
+        
         _routeService.RemoveRoute(containerId);
         return Task.CompletedTask;
     }
@@ -135,6 +148,7 @@ public class DockerMonitorService : BackgroundService
         var route = new RouteConfiguration
         {
             Id = container.Id,
+            Name = container.Name,
             Host = container.Labels.Host!,
             DestinationUrl = destinationUrl,
             TlsEnabled = container.Labels.Tls,

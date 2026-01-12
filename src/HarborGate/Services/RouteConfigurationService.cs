@@ -45,9 +45,14 @@ public class RouteConfigurationService : IProxyConfigProvider
     public void AddOrUpdateRoute(RouteConfiguration route)
     {
         _routes.AddOrUpdate(route.Id, route, (_, _) => route);
+        
+        var containerDisplay = route.Name != null 
+            ? $"{route.Name} ({route.Id[..12]})" 
+            : route.Id[..12];
+        
         _logger.LogInformation(
-            "Route added/updated: {RouteId} - {Host} -> {Destination}",
-            route.Id, route.Host, route.DestinationUrl);
+            "Route added/updated: {Container} - {Host} -> {Destination}",
+            containerDisplay, route.Host, route.DestinationUrl);
         
         RebuildConfiguration();
     }
@@ -59,9 +64,13 @@ public class RouteConfigurationService : IProxyConfigProvider
     {
         if (_routes.TryRemove(routeId, out var route))
         {
+            var containerDisplay = route.Name != null 
+                ? $"{route.Name} ({routeId[..12]})" 
+                : routeId[..12];
+            
             _logger.LogInformation(
-                "Route removed: {RouteId} - {Host}",
-                routeId, route.Host);
+                "Route removed: {Container} - {Host}",
+                containerDisplay, route.Host);
             
             RebuildConfiguration();
         }
