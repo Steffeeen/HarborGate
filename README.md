@@ -94,8 +94,6 @@ Configure services using Docker labels:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `HARBORGATE_HTTP_PORT` | `80` | HTTP port |
-| `HARBORGATE_HTTPS_PORT` | `443` | HTTPS port |
 | `HARBORGATE_ENABLE_HTTPS` | `false` | Enable HTTPS |
 | `HARBORGATE_LOG_LEVEL` | `Information` | Log level (Trace, Debug, Information, Warning, Error, Critical) |
 

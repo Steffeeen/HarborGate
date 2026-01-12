@@ -107,10 +107,10 @@ HARBORGATE_OIDC_CLIENT_SECRET=your-secret
 HARBORGATE_OIDC_CALLBACK_PATH=/signin-oidc
 
 # General
-HARBORGATE_HTTP_PORT=80
-HARBORGATE_HTTPS_PORT=443
 HARBORGATE_LOG_LEVEL=Information
 ```
+
+**Note:** HTTP and HTTPS ports are configured in `appsettings.json`, not environment variables. Default ports are 80 (HTTP) and 443 (HTTPS). For development, configure different ports in `appsettings.Development.json`. For production, use Docker port mapping: `-p 8080:80 -p 8443:443`
 
 ## Development Phases
 

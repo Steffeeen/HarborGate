@@ -25,8 +25,6 @@ services:
       - "443:443"
     environment:
       - ASPNETCORE_ENVIRONMENT=Pebble
-      - HARBORGATE_HTTP_PORT=80
-      - HARBORGATE_HTTPS_PORT=443
       - HARBORGATE_LOG_LEVEL=Debug
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro

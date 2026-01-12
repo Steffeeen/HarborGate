@@ -24,8 +24,6 @@ T ReadConfig<T>(string key, T defaultValue)
     return value ?? defaultValue;
 }
 
-harborGateOptions.HttpPort = ReadConfig("HARBORGATE_HTTP_PORT", harborGateOptions.HttpPort);
-harborGateOptions.HttpsPort = ReadConfig("HARBORGATE_HTTPS_PORT", harborGateOptions.HttpsPort);
 harborGateOptions.EnableHttps = ReadConfig("HARBORGATE_ENABLE_HTTPS", harborGateOptions.EnableHttps);
 
 harborGateOptions.LogLevel = ReadConfig("HARBORGATE_LOG_LEVEL", harborGateOptions.LogLevel);
@@ -201,10 +199,10 @@ var certificateSelectorHolder = new CertificateSelectorHolder();
 
 builder.WebHost.ConfigureKestrel((_, options) =>
 {
-    // Listen on HTTP
+    // Listen on configured HTTP port
     options.ListenAnyIP(harborGateOptions.HttpPort);
     
-    // Listen on HTTPS if enabled
+    // Listen on configured HTTPS port if enabled
     if (harborGateOptions.EnableHttps)
     {
         options.ListenAnyIP(harborGateOptions.HttpsPort, listenOptions =>

@@ -95,16 +95,9 @@ curl -H "Host: whoami2.localhost" http://localhost:8080
 
 **Key differences from production:**
 - Port 8080 instead of 80 (no admin privileges needed)
+- Port 8443 instead of 443
 - Debug logging for detailed output
 - Same Docker socket access as containerized version
-
-### Environment Variable Overrides
-
-```bash
-HARBORGATE_HTTP_PORT=9000 \
-HARBORGATE_LOG_LEVEL=Information \
-dotnet run --project src/HarborGate
-```
 
 ### Testing Dynamic Updates
 
@@ -222,6 +215,8 @@ appsettings.json:
   }
 }
 ```
+
+**Note:** For development, use a non-standard HTTPS port like 8443 to avoid requiring admin privileges.
 
 **Usage:**
 
