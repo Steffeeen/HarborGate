@@ -10,6 +10,22 @@ Built mostly using Claude Sonnet 4.5 with [opencode](https://opencode.ai/).
 - **SSL/TLS**: Let's Encrypt integration with automatic renewal
 - **Authentication**: OpenID Connect with role-based access control (RBAC)
 
+## Installation
+
+### Using Pre-built Images
+
+Harbor Gate images are automatically built and published to GitHub Container Registry.
+
+**Pull the latest image:**
+```bash
+docker pull ghcr.io/steffeeen/harborgate:latest
+```
+
+**Available tags:**
+- `latest` - Latest build from master branch
+- `1.0.0`, `1.0`, `1` - Semantic version tags (when released)
+- `master-<sha>` - Specific commit builds
+
 ## Quick Start
 
 ### Using Docker Compose
@@ -17,7 +33,7 @@ Built mostly using Claude Sonnet 4.5 with [opencode](https://opencode.ai/).
 ```yaml
 services:
   harborgate:
-    image: harborgate:latest
+    image: ghcr.io/steffeeen/harborgate:latest
     ports:
       - "80:80"
       - "443:443"
@@ -114,6 +130,11 @@ Configure services using Docker labels:
 | `HARBORGATE_OIDC_CLIENT_SECRET` | - | **Required if enabled.** OAuth 2.0 Client Secret |
 | `HARBORGATE_OIDC_ROLE_CLAIM_TYPE` | `role` | Claim type for RBAC |
 
+**Note:** HTTP and HTTPS ports can be configured in `appsettings.json` but **not** via environment variables. Default ports are 80 (HTTP) and 443 (HTTPS). For development, you can configure different ports in `appsettings.Development.json`. For production, use Docker port mapping to expose different ports on the host:
+```bash
+docker run -p 8080:80 -p 8443:443 ghcr.io/stffabi/harborgate:latest
+```
+
 ## Development
 
 See [DEVELOPMENT.md](docs/DEVELOPMENT.md) for local development setup, testing, and architecture details.
@@ -129,7 +150,12 @@ dotnet build
 ### Build Docker Image
 
 ```bash
-docker build -t harborgate:latest -f src/HarborGate/Dockerfile .
+docker build -t ghcr.io/stffabi/harborgate:latest -f src/HarborGate/Dockerfile .
+```
+
+Or use the pre-built image from GitHub Container Registry:
+```bash
+docker pull ghcr.io/stffabi/harborgate:latest
 ```
 
 ### Run Tests
