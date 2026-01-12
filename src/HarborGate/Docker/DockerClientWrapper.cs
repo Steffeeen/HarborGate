@@ -251,10 +251,14 @@ public class DockerClientWrapper : IDockerClientWrapper, IDisposable
             
             if (exposedPorts.Count > 1)
             {
+                var containerDisplay = container.Name != null 
+                    ? $"{container.Name} ({container.ID[..12]})" 
+                    : container.ID[..12];
+                
                 _logger.LogWarning(
-                    "Container {ContainerId} exposes multiple ports. Using first port {Port}. " +
+                    "Container {container} exposes multiple ports. Using first port {Port}. " +
                     "Consider setting harborgate.port label explicitly.",
-                    container.ID, port);
+                    containerDisplay, port);
             }
             
             return port;
