@@ -5,6 +5,7 @@ using HarborGate.Middleware;
 using HarborGate.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -185,6 +186,16 @@ if (harborGateOptions.Oidc.Enabled)
     });
 }
 
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("conn", opt =>
+    {
+        opt.PermitLimit = 20;
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.QueueLimit = 0;
+    });
+});
+
 // Register our custom configuration provider FIRST
 builder.Services.AddSingleton<Yarp.ReverseProxy.Configuration.IProxyConfigProvider>(sp => 
     sp.GetRequiredService<RouteConfigurationService>());
@@ -230,9 +241,15 @@ builder.WebHost.ConfigureKestrel((_, options) =>
             });
         });
     }
+
+    options.Limits.MaxRequestBodySize = null;
+    options.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(30);
+    options.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(30);
 });
 
 var app = builder.Build();
+
+app.UseRateLimiter();
 
 // Initialize certificate selector after app is built
 if (harborGateOptions.EnableHttps)
