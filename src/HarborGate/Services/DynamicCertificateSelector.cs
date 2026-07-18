@@ -43,7 +43,7 @@ public class DynamicCertificateSelector
 
         if (!routeExists)
         {
-            _logger.LogWarning("Rejecting certificate request for unknown hostname: {Hostname}", hostname);
+            _logger.LogDebug("Rejecting certificate request for unknown hostname: {Hostname}", hostname);
             return null;
         }
 
