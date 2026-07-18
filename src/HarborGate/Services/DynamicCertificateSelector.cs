@@ -11,13 +11,16 @@ namespace HarborGate.Services;
 public class DynamicCertificateSelector
 {
     private readonly ICertificateProvider _certificateProvider;
+    private readonly RouteConfigurationService _routeService;
     private readonly ILogger<DynamicCertificateSelector> _logger;
 
     public DynamicCertificateSelector(
         ICertificateProvider certificateProvider,
+        RouteConfigurationService routeService,
         ILogger<DynamicCertificateSelector> logger)
     {
         _certificateProvider = certificateProvider;
+        _routeService = routeService;
         _logger = logger;
     }
 
@@ -31,6 +34,16 @@ public class DynamicCertificateSelector
         if (string.IsNullOrEmpty(hostname))
         {
             _logger.LogWarning("No hostname provided in SNI, cannot select certificate");
+            return null;
+        }
+
+        hostname = hostname.Trim().TrimEnd('.');
+        var routeExists = _routeService.GetAllRoutes().Values.Any(route =>
+            string.Equals(route.Host.TrimEnd('.'), hostname, StringComparison.OrdinalIgnoreCase));
+
+        if (!routeExists)
+        {
+            _logger.LogWarning("Rejecting certificate request for unknown hostname: {Hostname}", hostname);
             return null;
         }
 

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Net;
 using System.Net.Security;
+using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using FluentAssertions;
 using Xunit.Abstractions;
@@ -32,15 +33,23 @@ public class SslTests : IAsyncLifetime
             Timeout = TimeSpan.FromSeconds(10)
         };
 
-        // HTTPS client that accepts any certificate (for Pebble testing)
-        var httpsHandler = new HttpClientHandler
+        // Connect to the local test port while preserving the URI hostname as TLS SNI.
+        var httpsHandler = new SocketsHttpHandler
         {
-            ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
+            ConnectCallback = async (_, cancellationToken) =>
+            {
+                var socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
+                await socket.ConnectAsync(IPAddress.Loopback, 8443, cancellationToken);
+                return new NetworkStream(socket, ownsSocket: true);
+            },
+            SslOptions = new SslClientAuthenticationOptions
+            {
+                RemoteCertificateValidationCallback = (_, _, _, _) => true
+            }
         };
         
         _httpsClient = new HttpClient(httpsHandler)
         {
-            BaseAddress = new Uri("https://localhost:8443"),
             Timeout = TimeSpan.FromSeconds(10)
         };
     }
@@ -90,13 +99,10 @@ public class SslTests : IAsyncLifetime
     public async Task Test02_HttpsRequest_TriggersCertificateRequest()
     {
         // Arrange
-        var request = new HttpRequestMessage(HttpMethod.Get, "/");
-        request.Headers.Host = "app1.ssl.test";
-
         // Act - First HTTPS request should trigger certificate request from Pebble
         _output.WriteLine("Making first HTTPS request to trigger certificate issuance...");
         
-        var response = await _httpsClient.SendAsync(request);
+        var response = await SendHttpsRequestAsync("app1.ssl.test");
         var content = await response.Content.ReadAsStringAsync();
 
         // Assert
@@ -110,19 +116,14 @@ public class SslTests : IAsyncLifetime
     public async Task Test03_HttpsRequest_UsesCachedCertificate()
     {
         // Arrange - First request to ensure certificate exists
-        var request1 = new HttpRequestMessage(HttpMethod.Get, "/");
-        request1.Headers.Host = "app1.ssl.test";
-        await _httpsClient.SendAsync(request1);
+        await SendHttpsRequestAsync("app1.ssl.test");
         
         // Wait a moment
         await Task.Delay(2000);
 
         // Act - Second request should use cached certificate
-        var request2 = new HttpRequestMessage(HttpMethod.Get, "/");
-        request2.Headers.Host = "app1.ssl.test";
-        
         var stopwatch = Stopwatch.StartNew();
-        var response = await _httpsClient.SendAsync(request2);
+        var response = await SendHttpsRequestAsync("app1.ssl.test");
         stopwatch.Stop();
 
         // Assert
@@ -136,15 +137,11 @@ public class SslTests : IAsyncLifetime
     public async Task Test04_MultipleDomains_GetSeparateCertificates()
     {
         // Arrange & Act - Request certificates for two different domains
-        var request1 = new HttpRequestMessage(HttpMethod.Get, "/");
-        request1.Headers.Host = "app1.ssl.test";
-        var response1 = await _httpsClient.SendAsync(request1);
+        var response1 = await SendHttpsRequestAsync("app1.ssl.test");
 
         await Task.Delay(2000);
 
-        var request2 = new HttpRequestMessage(HttpMethod.Get, "/");
-        request2.Headers.Host = "app2.ssl.test";
-        var response2 = await _httpsClient.SendAsync(request2);
+        var response2 = await SendHttpsRequestAsync("app2.ssl.test");
 
         // Assert
         response1.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -157,9 +154,7 @@ public class SslTests : IAsyncLifetime
     public async Task Test05_CertificateStorage_PersistsToVolume()
     {
         // Arrange - Request a certificate
-        var request = new HttpRequestMessage(HttpMethod.Get, "/");
-        request.Headers.Host = "app1.ssl.test";
-        await _httpsClient.SendAsync(request);
+        await SendHttpsRequestAsync("app1.ssl.test");
         
         await Task.Delay(3000);
 
@@ -195,38 +190,41 @@ public class SslTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Test07_InvalidDomain_StillWorksWithHttpsClient()
+    public async Task Test07_InvalidDomain_IsRejectedBeforeCertificateIssuance()
     {
-        // This test verifies that Harbor Gate handles HTTPS requests gracefully
-        // even when the certificate might not be ready immediately
-        
-        // Arrange
-        var request = new HttpRequestMessage(HttpMethod.Get, "/");
-        request.Headers.Host = "newdomain.ssl.test";
+        var act = () => SendHttpsRequestAsync("newdomain.ssl.test");
 
-        try
-        {
-            // Act - First request to a new domain
-            var response = await _httpsClient.SendAsync(request);
+        await act.Should().ThrowAsync<HttpRequestException>();
+    }
 
-            // Assert - Should eventually succeed or fail gracefully
-            _output.WriteLine($"New domain request status: {response.StatusCode}");
-        }
-        catch (Exception ex)
-        {
-            // Expected - certificate might not be ready yet
-            _output.WriteLine($"Expected initial failure: {ex.Message}");
-        }
+    [Fact]
+    public async Task Test08_ConcurrentConnections_UseOneCertificate()
+    {
+        var connections = Enumerable.Range(0, 8)
+            .Select(_ => GetServerCertificateThumbprintAsync("app1.ssl.test"));
 
-        // Give time for certificate to be issued
-        await Task.Delay(10000);
+        var thumbprints = await Task.WhenAll(connections);
 
-        // Act - Retry should work
-        var request2 = new HttpRequestMessage(HttpMethod.Get, "/");
-        request2.Headers.Host = "newdomain.ssl.test";
-        
-        // This might fail if the domain doesn't have a backend, which is expected
-        _output.WriteLine("Second attempt after certificate issuance delay");
+        thumbprints.Should().OnlyHaveUniqueItems().And.HaveCount(1);
+    }
+
+    private Task<HttpResponseMessage> SendHttpsRequestAsync(string hostname)
+    {
+        return _httpsClient.GetAsync($"https://{hostname}:8443/");
+    }
+
+    private static async Task<string> GetServerCertificateThumbprintAsync(string hostname)
+    {
+        using var tcpClient = new TcpClient();
+        await tcpClient.ConnectAsync(IPAddress.Loopback, 8443);
+
+        await using var sslStream = new SslStream(
+            tcpClient.GetStream(),
+            leaveInnerStreamOpen: false,
+            (_, _, _, _) => true);
+        await sslStream.AuthenticateAsClientAsync(hostname);
+
+        return sslStream.RemoteCertificate!.GetCertHashString();
     }
 
     private async Task RunDockerComposeCommand(string command)

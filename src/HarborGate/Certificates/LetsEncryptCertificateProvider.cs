@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+using System.Globalization;
 using System.Security.Cryptography.X509Certificates;
 using System.Net;
 using System.Net.Security;
@@ -22,6 +24,10 @@ public class LetsEncryptCertificateProvider : ICertificateProvider
     private readonly IHttpChallengeStore _challengeStore;
     private AcmeContext? _acmeContext;
     private readonly SemaphoreSlim _acmeContextLock = new(1, 1);
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _certificateLocks =
+        new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, DateTimeOffset> _retryAfter =
+        new(StringComparer.OrdinalIgnoreCase);
 
     public LetsEncryptCertificateProvider(
         CertificateStorageService storage,
@@ -48,6 +54,8 @@ public class LetsEncryptCertificateProvider : ICertificateProvider
 
     public async Task<X509Certificate2?> GetCertificateAsync(string hostname, CancellationToken cancellationToken = default)
     {
+        hostname = NormalizeHostname(hostname);
+
         // Check if we already have a valid certificate
         var existingCert = _storage.GetCertificate(hostname);
         if (existingCert != null)
@@ -56,16 +64,33 @@ public class LetsEncryptCertificateProvider : ICertificateProvider
             return existingCert;
         }
 
-        // Request a new certificate from Let's Encrypt
-        _logger.LogInformation("Requesting new Let's Encrypt certificate for {Hostname}", hostname);
-        
+        var certificateLock = _certificateLocks.GetOrAdd(hostname, _ => new SemaphoreSlim(1, 1));
+        await certificateLock.WaitAsync(cancellationToken);
         try
         {
+            // Another TLS connection may have obtained the certificate while we waited.
+            existingCert = _storage.GetCertificate(hostname);
+            if (existingCert != null)
+            {
+                return existingCert;
+            }
+
+            if (IsRetryDeferred(hostname))
+            {
+                return null;
+            }
+
+            _logger.LogInformation("Requesting new Let's Encrypt certificate for {Hostname}", hostname);
             var certificate = await RequestCertificateAsync(hostname, cancellationToken);
             
             if (certificate != null)
             {
+                _retryAfter.TryRemove(hostname, out _);
                 await _storage.StoreCertificateAsync(hostname, certificate, "LetsEncrypt");
+            }
+            else
+            {
+                DeferRetry(hostname, DateTimeOffset.UtcNow.AddMinutes(5));
             }
 
             return certificate;
@@ -74,6 +99,10 @@ public class LetsEncryptCertificateProvider : ICertificateProvider
         {
             _logger.LogError(ex, "Failed to request Let's Encrypt certificate for {Hostname}", hostname);
             return null;
+        }
+        finally
+        {
+            certificateLock.Release();
         }
     }
 
@@ -100,13 +129,42 @@ public class LetsEncryptCertificateProvider : ICertificateProvider
 
     public async Task<X509Certificate2?> RenewCertificateAsync(string hostname, CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Renewing Let's Encrypt certificate for {Hostname}", hostname);
-        
-        // Remove old certificate
-        _storage.RemoveCertificate(hostname);
+        hostname = NormalizeHostname(hostname);
+        var certificateLock = _certificateLocks.GetOrAdd(hostname, _ => new SemaphoreSlim(1, 1));
+        await certificateLock.WaitAsync(cancellationToken);
+        try
+        {
+            // A concurrent renewal may already have replaced the certificate.
+            if (!await NeedsRenewalAsync(hostname, cancellationToken))
+            {
+                return _storage.GetCertificate(hostname);
+            }
 
-        // Request new certificate
-        return await GetCertificateAsync(hostname, cancellationToken);
+            if (IsRetryDeferred(hostname))
+            {
+                return null;
+            }
+
+            _logger.LogInformation("Renewing Let's Encrypt certificate for {Hostname}", hostname);
+
+            // Keep serving the current certificate unless replacement succeeds.
+            var certificate = await RequestCertificateAsync(hostname, cancellationToken);
+            if (certificate != null)
+            {
+                _retryAfter.TryRemove(hostname, out _);
+                await _storage.StoreCertificateAsync(hostname, certificate, "LetsEncrypt");
+            }
+            else
+            {
+                DeferRetry(hostname, DateTimeOffset.UtcNow.AddMinutes(5));
+            }
+
+            return certificate;
+        }
+        finally
+        {
+            certificateLock.Release();
+        }
     }
 
     public Task<IReadOnlyList<string>> GetAllHostnamesAsync(CancellationToken cancellationToken = default)
@@ -236,6 +294,12 @@ public class LetsEncryptCertificateProvider : ICertificateProvider
         }
         catch (Exception ex)
         {
+            if (ex is AcmeRequestException acmeException &&
+                acmeException.Error?.Type?.EndsWith(":rateLimited", StringComparison.Ordinal) == true)
+            {
+                DeferRetry(hostname, GetRateLimitRetryTime(acmeException.Error.Detail));
+            }
+
             _logger.LogError(ex, "Failed to request certificate from Let's Encrypt for {Hostname}", hostname);
             return null;
         }
@@ -314,5 +378,52 @@ public class LetsEncryptCertificateProvider : ICertificateProvider
         {
             _acmeContextLock.Release();
         }
+    }
+
+    private static string NormalizeHostname(string hostname)
+    {
+        return hostname.Trim().TrimEnd('.').ToLowerInvariant();
+    }
+
+    private bool IsRetryDeferred(string hostname)
+    {
+        if (!_retryAfter.TryGetValue(hostname, out var retryAfter) || retryAfter <= DateTimeOffset.UtcNow)
+        {
+            return false;
+        }
+
+        _logger.LogDebug(
+            "Deferring ACME certificate request for {Hostname} until {RetryAfter}",
+            hostname,
+            retryAfter);
+        return true;
+    }
+
+    private void DeferRetry(string hostname, DateTimeOffset retryAfter)
+    {
+        _retryAfter.AddOrUpdate(hostname, retryAfter, (_, current) => retryAfter > current ? retryAfter : current);
+    }
+
+    private static DateTimeOffset GetRateLimitRetryTime(string? detail)
+    {
+        const string marker = "retry after ";
+        const int timestampLength = 23;
+        var markerIndex = detail?.IndexOf(marker, StringComparison.OrdinalIgnoreCase) ?? -1;
+
+        if (markerIndex >= 0 && detail!.Length >= markerIndex + marker.Length + timestampLength)
+        {
+            var timestamp = detail.Substring(markerIndex + marker.Length, timestampLength);
+            if (DateTimeOffset.TryParseExact(
+                timestamp,
+                "yyyy-MM-dd HH:mm:ss 'UTC'",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal,
+                out var retryAfter))
+            {
+                return retryAfter;
+            }
+        }
+
+        return DateTimeOffset.UtcNow.AddHours(1);
     }
 }

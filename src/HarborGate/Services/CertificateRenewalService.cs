@@ -8,14 +8,17 @@ namespace HarborGate.Services;
 public class CertificateRenewalService : BackgroundService
 {
     private readonly ICertificateProvider _certificateProvider;
+    private readonly RouteConfigurationService _routeService;
     private readonly ILogger<CertificateRenewalService> _logger;
     private readonly TimeSpan _checkInterval;
 
     public CertificateRenewalService(
         ICertificateProvider certificateProvider,
+        RouteConfigurationService routeService,
         ILogger<CertificateRenewalService> logger)
     {
         _certificateProvider = certificateProvider;
+        _routeService = routeService;
         _logger = logger;
         _checkInterval = TimeSpan.FromHours(12); // Check twice daily
     }
@@ -59,8 +62,20 @@ public class CertificateRenewalService : BackgroundService
 
         _logger.LogInformation("Checking {Count} certificates", hostnames.Count);
 
+        var activeHostnames = _routeService.GetAllRoutes().Values
+            .Select(route => route.Host.TrimEnd('.'))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         foreach (var hostname in hostnames)
         {
+            if (!activeHostnames.Contains(hostname.TrimEnd('.')))
+            {
+                _logger.LogInformation(
+                    "Skipping certificate renewal for {Hostname} because it has no active route",
+                    hostname);
+                continue;
+            }
+
             try
             {
                 var needsRenewal = await _certificateProvider.NeedsRenewalAsync(hostname, cancellationToken);
